@@ -283,3 +283,132 @@ Clicked **Start using Jenkins** — and boom!
 The **Jenkins dashboard** opened up in all its glory.
 
 ---
+
+### 🚀 Starting the Jenkins "Hello World" CI/CD Project
+
+With Jenkins up and running, I began setting up my first test project — just to get the basics right.
+
+---
+
+### 🆕 Step 1: Create a New Project
+
+- From the **Jenkins Dashboard**, I clicked on **“New Item.”**
+- If Jenkins asked for login credentials again, I just entered:
+    - **Username**: `rohannag`
+    - **Password**: `1234`
+- For the **Item Name**, I typed:
+    
+    ```
+    hello-world
+    
+    ```
+    
+- Jenkins gave multiple options:
+    - **Freestyle project** ✅ *(I selected this one for simplicity)*
+    - Pipeline
+    - Multi-configuration
+    - Folder
+    - etc.
+
+---
+
+### 🧩 Step 2: Understanding the Project Options
+
+Here’s a quick breakdown of the project configuration options:
+
+- **Discard old builds**: Helps manage storage by automatically deleting older builds after a set number or days.
+- **GitHub project**: If checked, lets me link a GitHub repo URL for integration.
+- **This project is parameterized**: Allows passing user-defined parameters (e.g., environment name, version) into the build.
+- **Throttle builds**: Controls how many builds can run concurrently (across projects or inside one).
+- **Execute concurrent builds if necessary**: Enables parallel execution of builds of the *same* job (useful for high-demand automation).
+
+For now, I didn’t touch any of these.
+
+---
+
+### ⏰ Step 3: Build Triggers
+
+These define when Jenkins should automatically start a build. Options included:
+
+- **Trigger builds remotely**: Allows using a URL or script to trigger builds (e.g., from webhook or curl).
+- **Build after other projects are built**: Creates dependency chains between projects.
+- **Build periodically**: Like a cron job. E.g., `H 0 * * *` to build every night.
+- **GitHub hook trigger for GITScm polling**: Starts a build when GitHub sends a webhook.
+- **Poll SCM**: Jenkins regularly checks for code changes in the source repo.
+
+Since this is just a “Hello World” test, I didn’t configure any triggers.
+
+---
+
+### 🔧 Step 4: Add Build Step
+
+Under the **Build section**:
+
+- I clicked **“Add build step”** > **Execute shell** (since my Jenkins is on Ubuntu).
+- In the command box, I simply added:
+    
+    ```bash
+    echo "Hello World!"
+    
+    ```
+    
+
+📝 *I could’ve added multiple build steps here for more complex pipelines — like building code, running tests, deploying, etc. But for now, this single echo command is enough.*
+
+---
+
+### 📦 Step 5: Post-build Actions (optional)
+
+There were post-build options like:
+
+- **Archive the artifacts** (save files after build)
+- **Send email notifications**
+- **Publish test results**
+- **Trigger other builds**
+
+But again, not required for this small test.
+
+---
+
+### 💾 Step 6: Save and Run the Build
+
+- Hit **Save**.
+- On the project dashboard, clicked **“Build Now.”**
+
+It started building!
+
+---
+
+### 📜 Step 7: View Console Output
+
+After the build completed, I clicked on:
+
+- **Build #1** > **Console Output**
+
+Here’s what I saw:
+
+```
+Started by user Rohan Nag
+Running as SYSTEM
+Building in workspace /var/lib/jenkins/workspace/hello-world
+[hello-world] $ /bin/sh -xe /tmp/jenkins7653354901156340797.sh
++ echo Hello World!
+Hello World!
+Finished: SUCCESS
+
+```
+
+🔍 **Explanation:**
+
+- Jenkins started the job (`Started by user Rohan Nag`)
+- It ran the job as the `SYSTEM` user
+- It executed the shell script it generated temporarily
+- The `+ echo Hello World!` line is our build step being executed
+- And finally — `Hello World!` was printed on the terminal
+- ✅ `Finished: SUCCESS` confirms the build was successful!
+
+---
+
+### 🎉 DONE!
+
+My first Jenkins job worked exactly as expected. Simple, clean, and successful.
