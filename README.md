@@ -21,6 +21,14 @@ This repository is dedicated to tracking my journey through DevOps training at C
      - [🧭 DevOps Principles](#-devops-principles)
      - [🛠️ DevOps Practices](#%EF%B8%8F-devops-practices)
      - [🌱 DevOps Culture](#-devops-culture)
+   - [The DevOps Lifecycle](#the-devops-lifecycle)
+     - [Plan](#plan)
+     - [Build](#build)
+     - [Test](#test)
+     - [Release](#release)
+     - [Deploy](#deploy)
+     - [Monitor](#monitor)
+     - [Operate](#operate)
    - [Assignment: Setup Helloworld Simple Jenkins CI-CD on Local Setup](Helloworld_Jenkins_CI_CD_local_setup.md)
 
 ---
@@ -287,5 +295,196 @@ DevOps is not just a set of tools—**it’s a philosophy, a mindset, and a set 
 
 6. **Tooling Supports Culture, Not Defines It**  
    Tools enable collaboration and efficiency but are not the foundation of DevOps.
+
+---
+
+### The DevOps Lifecycle
+
+The **DevOps lifecycle** represents a continuous and collaborative approach to software development and operations. The lifecycle is **not linear**, but rather a **cyclic process** where every phase feeds into the next, enabling continuous feedback, improvement, and automation.
+
+---
+
+#### Plan
+
+**Overview:**  
+The **Plan** phase is the foundation of the DevOps lifecycle. It involves defining the vision, objectives, requirements, features, and tasks needed to build a software application.
+
+**Key Activities:**
+- Requirements gathering (functional and non-functional)
+- Roadmap creation
+- Sprint planning (Agile boards)
+- Task breakdown and assignments
+- Estimating effort and deadlines
+- Identifying dependencies and risks
+
+**Tools:**
+- **Jira**, **Trello**, **Asana** – Task and sprint management
+- **Confluence**, **Notion** – Documentation
+- **Slack**, **Teams** – Communication and collaboration
+
+**Goals:**
+- Align team objectives with business goals
+- Create clarity and visibility into upcoming work
+- Establish a repeatable planning cadence (often through Agile sprints)
+
+---
+
+#### Build
+
+**Overview:**  
+This phase involves **actual software development**. The code is written and stored in a version control system, then built into executable form.
+
+**Key Activities:**
+- Writing code
+- Version control and code branching
+- Compiling or bundling source code
+- Resolving dependencies
+- Packaging the build into an **artifact**
+
+**Tools:**
+- **Git**, **GitHub**, **GitLab**, **Bitbucket** – Source code management
+- **Maven**, **Gradle**, **npm**, **pip** – Build tools
+- **Docker** – Containerizing the build
+- **Jenkins**, **GitHub Actions** – Build orchestration
+
+**Goals:**
+- Generate stable, reproducible builds
+- Enable developers to collaborate through version control
+- Ensure rapid integration and iteration of code changes
+
+---
+
+#### Test
+
+**Overview:**  
+Testing ensures the quality, security, and performance of the application before it progresses further in the pipeline.
+
+**Key Activities:**
+- **Unit testing** – Checks individual components
+- **Integration testing** – Verifies combined components
+- **UI testing** – Ensures visual and functional correctness
+- **Regression testing** – Confirms old features still work
+- **Security and performance testing**
+
+**Tools:**
+- **JUnit**, **PyTest**, **TestNG** – Unit testing
+- **Selenium**, **Cypress** – UI testing
+- **Postman**, **SoapUI** – API testing
+- **JMeter**, **LoadRunner** – Load and performance testing
+- **OWASP ZAP**, **SonarQube** – Security testing
+
+**Goals:**
+- Detect bugs and vulnerabilities early
+- Automate repeatable tests to ensure consistency
+- Deliver high-quality, stable software
+
+---
+
+#### Release
+
+**Overview:**  
+The release phase is the **approval and readiness step** before deployment. The software is reviewed and scheduled for release into production or staging environments.
+
+**Key Activities:**
+- Final review and approval
+- Creating a release candidate
+- Versioning and tagging the release
+- Notifying stakeholders (QA, product, ops)
+- Change management and release documentation
+
+**Tools:**
+- **Jenkins**, **Travis CI**, **GitLab CI/CD**
+- **Octopus Deploy**
+- **ServiceNow**, **Jira Service Desk** – Change approvals
+
+**Goals:**
+- Ensure release is aligned with business needs
+- Coordinate across teams (Dev, QA, Ops)
+- Reduce risks through staged and controlled releases
+
+---
+
+#### Deploy
+
+**Overview:**  
+Deployment moves the tested release into the **target environments** (e.g., production, staging). This process should be **automated**, **reliable**, and **repeatable**.
+
+**Key Activities:**
+- Infrastructure provisioning
+- Configuration management
+- Artifact deployment
+- Rolling updates / Blue-Green / Canary deployments
+- Downtime management or zero-downtime deployment
+
+**Tools:**
+- **Ansible**, **Chef**, **Puppet** – Server automation
+- **Terraform**, **Pulumi** – Infrastructure as code
+- **Docker**, **Kubernetes** – Container orchestration
+- **Spinnaker**, **ArgoCD** – Kubernetes-native deployment
+
+**Goals:**
+- Reduce lead time to deploy
+- Ensure fast, reliable deployment pipelines
+- Enable rollback in case of failure
+
+---
+
+#### Monitor
+
+**Overview:**  
+Once software is deployed, the next step is to **monitor its performance, availability, errors, and usage**. This provides immediate feedback about production issues.
+
+**Key Activities:**
+- Uptime monitoring
+- Logging and alerting
+- User behavior and crash analysis
+- Resource consumption (CPU, memory, etc.)
+- Business metrics tracking
+
+**Tools:**
+- **Prometheus**, **Grafana** – Infrastructure and app metrics
+- **Datadog**, **New Relic**, **Dynatrace** – APM tools
+- **ELK Stack (Elasticsearch, Logstash, Kibana)** – Log aggregation
+- **Sentry**, **Rollbar** – Error tracking
+
+**Goals:**
+- Detect failures and performance issues early
+- Enable proactive issue resolution
+- Understand system behavior and user experience
+
+---
+
+#### Operate
+
+**Overview:**  
+This phase involves maintaining and managing the application and infrastructure in a **production environment**.
+
+**Key Activities:**
+- Responding to incidents and outages
+- Scaling infrastructure based on demand
+- Performing backups and disaster recovery
+- Routine maintenance (patches, updates)
+- Optimizing performance and cost
+
+**Tools:**
+- **PagerDuty**, **Opsgenie** – Incident response
+- **AWS CloudWatch**, **Azure Monitor**, **Google Stackdriver**
+- **Kubernetes**, **Nomad** – Orchestration and self-healing
+- **Terraform**, **Ansible** – Maintenance automation
+
+**Goals:**
+- Ensure 24x7 application availability
+- Maintain compliance, reliability, and performance
+- Minimize manual intervention using automation and auto-scaling
+
+---
+
+#### The DevOps Lifecycle Loop
+
+The DevOps lifecycle is iterative and continuous:
+ 
+- Feedback from **Monitor** and **Operate** feeds into **Plan** again.
+- The process becomes **faster and more efficient over time** due to automation, testing, and CI/CD pipelines.
+- **Culture, automation, measurement, and sharing (CAMS)** are central principles.
 
 ---
