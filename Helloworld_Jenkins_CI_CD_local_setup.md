@@ -1,4 +1,6 @@
-### 🚀 Assignment: Setup HelloWorld Simple Jenkins CI-CD on Local Setup (using AWS)
+## 🚀 Assignment: Setup HelloWorld Simple Jenkins CI-CD on Local Setup (using AWS)
+
+Check out my blog: https://www.rohannag.me/blog/jenkins-cicd-aws
 
 For this task, I decided to use AWS to simulate a local Jenkins CI-CD setup. Here’s how I went about it:
 
