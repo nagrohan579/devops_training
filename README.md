@@ -30,6 +30,18 @@ This repository is dedicated to tracking my journey through DevOps training at C
      - [Monitor](#monitor)
      - [Operate](#operate)
    - [Assignment: Setup Helloworld Simple Jenkins CI-CD on Local Setup](Helloworld_Jenkins_CI_CD_local_setup.md)
+   - [Docker – Detailed Notes](#docker--detailed-notes)
+     - [Why was Docker Needed?](#why-was-docker-needed)
+     - [How Docker Helped](#how-docker-helped)
+     - [What are Containers?](#what-are-containers)
+     - [Revisiting Operating System Concepts](#revisiting-operating-system-concepts)
+     - [Containers vs Virtual Machines (VMs)](#containers-vs-virtual-machines-vms)
+     - [How Applications are Deployed with Docker](#how-applications-are-deployed-with-docker)
+     - [Images vs Containers](#images-vs-containers)
+     - [Docker's Role in DevOps](#dockers-role-in-devops)
+     - [Docker Installation Guide](#docker-installation-guide)
+     - [Basic Docker Commands](#basic-docker-commands)
+     - [Docker Run in Detail](#docker-run-in-detail)
 
 ---
 
@@ -488,3 +500,672 @@ The DevOps lifecycle is iterative and continuous:
 - **Culture, automation, measurement, and sharing (CAMS)** are central principles.
 
 ---
+
+### Docker – Detailed Notes
+
+#### Why was Docker Needed?
+
+**Personal Experience Introduction:**
+
+The speaker shares a real-world project scenario where they needed to build a complete application stack. It included various technologies like:
+
+- NodeJS for the web server
+- MongoDB as the database
+- Redis for messaging
+- An orchestration tool for coordination
+
+**Challenges faced:**
+
+- **OS Compatibility Issues:**
+    
+    Every component (NodeJS, MongoDB, Redis, etc.) needed to be compatible with the operating system being used. Sometimes a version mismatch forced the team to look for another OS altogether.
+    
+- **Library and Dependency Conflicts:**
+    
+    Different services required different versions of the same libraries. This created conflicts and required constant management.
+    
+- **Changing Application Architecture:**
+    
+    As the application evolved — upgrading databases or components — the team had to repeatedly verify compatibility each time a change was made.
+    
+- **Developer Onboarding Difficulties:**
+    
+    Setting up a development environment for a new developer was tedious. They had to follow a long list of steps and manually configure everything correctly, including using the exact OS and component versions.
+    
+- **Environment Inconsistency:**
+    
+    Developers, testers, and production environments could differ (e.g., different operating systems), leading to problems where an app that worked in one environment failed in another.
+
+**Conclusion:**
+
+Managing the application lifecycle (development, building, shipping) became extremely painful.
+
+Thus, a solution was needed that:
+
+- Handled compatibility better
+- Allowed isolated setups of services
+- Provided easy setup for developers
+
+**Discovery:**
+
+This problem led the speaker to discover **Docker**.
+
+---
+
+#### How Docker Helped
+
+- **Containers for Each Component:**
+    
+    Each application component was run inside its own **container**. Each container had its **own dependencies and libraries**.
+    
+- **One-Time Configuration:**
+    
+    The Docker setup was built once. Afterwards, developers only had to run a simple `docker run` command to spin up the required environment.
+    
+- **OS Independence:**
+    
+    As long as Docker was installed, it didn't matter what OS the developer was using. The container would work the same way everywhere.
+
+---
+
+#### What are Containers?
+
+- **Isolated Environments:**
+    
+    A container is a completely isolated environment that has:
+    
+    - Its own processes and services
+    - Its own network interfaces
+    - Its own mounts
+- **Difference from Virtual Machines:**
+    
+    Although they behave somewhat like VMs, **containers share the same OS kernel** of the host system, unlike VMs which require their own OS.
+    
+- **History:**
+    
+    Containers are not new — technologies like **LXC, LXD, LXCFS** have existed for over a decade.
+    
+    Docker popularized containers by building a **high-level, user-friendly platform** on top of these low-level technologies.
+
+---
+
+#### Revisiting Operating System Concepts
+
+- **Structure of an OS:**
+    
+    Any Linux-based OS (Ubuntu, Fedora, CentOS, etc.) consists of:
+    
+    - **Kernel:** Manages hardware interactions.
+    - **Software Stack:** Things like user interfaces, drivers, compilers, developer tools, etc.
+- **Kernel Sharing in Containers:**
+    
+    Docker containers **share the host machine's kernel** but have their **own software stack** on top.
+    
+    Example:
+    
+    - An Ubuntu-based Docker host can run Debian, Fedora, or CentOS containers easily — all of them use the Linux kernel.
+- **Windows and Docker:**
+    - **Problem:** Windows has a different kernel than Linux, so you **cannot natively** run Linux containers on Windows.
+    - **Solution:** When Docker is installed on Windows, it **spins up a lightweight Linux Virtual Machine** internally to run Linux containers.
+    
+    Hence, Linux containers on Windows are actually Linux containers running inside a hidden Linux VM.
+
+---
+
+#### Containers vs Virtual Machines (VMs)
+
+| Aspect | Containers | Virtual Machines |
+| --- | --- | --- |
+| OS | Share host OS kernel | Each VM has its own OS |
+| Resource Usage | Lightweight (Megabytes) | Heavy (Gigabytes) |
+| Boot Time | Seconds | Minutes |
+| Isolation | Less strict (shared kernel) | Strong isolation |
+| Flexibility | Run apps built for same kernel | Run apps built for different kernels (Linux/Windows) |
+
+**Key Insight:**
+
+Docker containers are **not a replacement** for VMs — they complement each other.
+
+In real-world deployments:
+
+- Virtual machines are still used to host Docker containers.
+- One VM may now host **hundreds or thousands** of lightweight containers instead of just one application.
+
+---
+
+#### How Applications are Deployed with Docker
+
+- **Public Docker Hub:**
+    
+    Many common applications (OS images, databases, developer tools) are already containerized and available on Docker Hub (official repository).
+    
+- **Simple Deployment:**
+    
+    After installing Docker on a host, deploying applications becomes as simple as:
+    
+    ```bash
+    docker run <image-name>
+    ```
+    
+    Examples:
+    
+    - Run an instance of MongoDB
+    - Run Redis
+    - Run a NodeJS server
+- **Scaling:**
+    
+    If more instances of a service are needed:
+    
+    - Simply spin up more containers.
+    - Use a **load balancer** in front to distribute traffic.
+- **Failure Handling:**
+    
+    If a container fails:
+    
+    - Destroy the bad container.
+    - Launch a new one easily and quickly.
+
+---
+
+#### Images vs Containers
+
+- **Image:**
+    - A static template or package that contains the code, libraries, and dependencies.
+    - Think of it like a VM template.
+- **Container:**
+    - A **running instance** of an image.
+    - It's live, isolated, and has its own environment and processes.
+
+**Creating Custom Images:**
+
+If an organization needs something custom not found on Docker Hub:
+
+- They can **build their own image**.
+- Push it to Docker Hub (private or public).
+
+---
+
+#### Docker's Role in DevOps
+
+- **Traditional Approach:**
+    
+    Developers built the application → Gave it to Operations → Ops struggled to set it up manually.
+    
+- **With Docker:**
+    - Developers and Ops teams **collaborate** on a **Dockerfile**.
+    - This Dockerfile includes all setup instructions and requirements.
+    - A Docker Image is built from the Dockerfile.
+    - The same image is used in development, testing, and production.
+
+**Benefits:**
+
+- Eliminates the "it worked on my machine" problem.
+- Ensures consistency across environments.
+- Speeds up deployment.
+
+---
+
+#### Docker Installation Guide
+
+##### Step 1: Install Oracle VirtualBox
+
+- Download and install **Oracle VirtualBox** from the official website.
+- Install it on your **Windows laptop**.
+
+##### Step 2: Create an Ubuntu VM
+
+- Download an **Ubuntu ISO** (LTS version recommended, e.g., Ubuntu 22.04).
+- Open VirtualBox and create a **new VM**:
+    - Select "Linux" as the type and "Ubuntu" as the version.
+    - Allocate memory (RAM) and disk space.
+- Attach the Ubuntu ISO in the VM settings → **Storage** → **Add ISO**.
+- Boot the VM and install Ubuntu by following the on-screen instructions.
+
+##### Step 3: Install Docker on Ubuntu
+
+Open the **terminal** inside the Ubuntu VM and follow these steps:
+
+1. **Update package index:**
+    
+    ```bash
+    sudo apt update
+    ```
+    
+2. **Install required packages:**
+    
+    ```bash
+    sudo apt install apt-transport-https ca-certificates curl software-properties-common
+    ```
+    
+3. **Add Docker's official GPG key:**
+    
+    ```bash
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    ```
+    
+4. **Set up the Docker repository:**
+    
+    ```bash
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    ```
+    
+5. **Update package index again (after adding Docker repo):**
+    
+    ```bash
+    sudo apt update
+    ```
+    
+6. **Install Docker Engine:**
+    
+    ```bash
+    sudo apt install docker-ce
+    ```
+
+---
+
+##### Step 4: Start Docker Service
+
+- Start the Docker service:
+    
+    ```bash
+    sudo service docker start
+    ```
+    
+- (Optional) To enable Docker to start automatically on boot:
+    
+    ```bash
+    sudo systemctl enable docker
+    ```
+
+---
+
+##### Step 5: Test Docker Installation
+
+- Run the **hello-world** container:
+    
+    ```bash
+    sudo docker run hello-world
+    ```
+    
+    - ✅ Docker ran successfully with `sudo`.
+- Try running without `sudo`:
+    
+    ```bash
+    docker run hello-world
+    ```
+    
+    - ❌ **Error**: Permission denied (expected).
+
+---
+
+##### Step 6: Run Docker Without `sudo`
+
+- Add your user to the `docker` group:
+    
+    ```bash
+    sudo usermod -aG docker $USER
+    ```
+    
+- **Important:** After running the above command, **log out and log back in** (or restart the VM) so that group changes take effect.
+- Now try running again:
+    
+    ```bash
+    docker run hello-world
+    ```
+    
+    - ✅ **Success!** Docker now works without `sudo`.
+
+---
+
+#### Basic Docker Commands
+
+##### 1. Running a Docker Container
+
+- Command:
+    
+    ```bash
+    docker run <image-name>
+    ```
+    
+- **Example**:
+    
+    ```bash
+    docker run centos
+    ```
+    
+- Behavior:
+    - Docker checks if the image exists locally.
+    - If not, Docker downloads (pulls) it from **Docker Hub**.
+    - Official images (e.g., centos, ubuntu, nginx) can be pulled just by name.
+
+---
+
+##### 2. Running a Container with a Command
+
+- To keep a container running (otherwise it exits immediately):
+    - Provide a command like `bash` or `sleep`.
+    - Example to open bash inside a CentOS container:
+        
+        ```bash
+        docker run -it centos bash
+        ```
+        
+    - `it` options:
+        - `i`: Interactive mode (keeps STDIN open)
+        - `t`: Allocates a pseudo-TTY (terminal)
+
+---
+
+##### 3. Listing Containers
+
+- **List running containers**:
+    
+    ```bash
+    docker ps
+    ```
+    
+- **List all containers (running + exited)**:
+    
+    ```bash
+    docker ps -a
+    ```
+
+---
+
+##### 4. Running Containers in Detached Mode
+
+- Run containers in background (detached):
+    
+    ```bash
+    docker run -d centos sleep 20
+    ```
+    
+- `d`: Detached mode (container runs in background)
+- Can still check them using `docker ps`.
+
+---
+
+##### 5. Stopping and Killing Containers
+
+- **Stop a running container**:
+    
+    ```bash
+    docker stop <container-name-or-ID>
+    ```
+    
+- After stopping, container is listed as **Exited** in `docker ps -a`.
+- Exit codes:
+    - `0` → Normal exit
+    - `137` → Force-stopped or killed
+
+---
+
+##### 6. Removing Containers
+
+- **Remove one container**:
+    
+    ```bash
+    docker rm <container-name-or-ID>
+    ```
+    
+- **Remove multiple containers**:
+    
+    ```bash
+    docker rm <container-ID-1> <container-ID-2> <container-ID-3>
+    ```
+    
+- Tip: You don't have to type the full ID, just the first few characters.
+
+---
+
+##### 7. Viewing Docker Images
+
+- **List downloaded images**:
+    
+    ```bash
+    docker images
+    ```
+    
+- Displays:
+    - Repository
+    - Tag
+    - Image ID
+    - Size
+
+---
+
+##### 8. Removing Docker Images
+
+- **Remove an image**:
+    
+    ```bash
+    docker rmi <image-name>
+    ```
+    
+- **Note**:
+    
+    You cannot delete an image if containers are still using it.
+    
+    - First, remove the containers:
+        
+        ```bash
+        docker rm <container-ID>
+        ```
+        
+    - Then remove the image.
+
+---
+
+##### 9. Pulling an Image without Running It
+
+- **Pull image only** (without running):
+    
+    ```bash
+    docker pull <image-name>
+    ```
+
+---
+
+##### 10. Quick Notes on Image Repositories
+
+- **Official images**:
+    - Pulled directly by name (e.g., `centos`, `ubuntu`).
+- **Personal or custom images**:
+    - Use format:
+        
+        ```
+        <dockerhub-username>/<repository-name>
+        ```
+        
+    - Example:
+        
+        ```bash
+        docker run mmsumshad/ansible-playable
+        ```
+
+---
+
+### Summary of Common Commands
+
+| Action | Command Example |
+| --- | --- |
+| Run a container | `docker run centos` |
+| Run interactively | `docker run -it centos bash` |
+| List running containers | `docker ps` |
+| List all containers | `docker ps -a` |
+| Stop a container | `docker stop <container-ID>` |
+| Remove a container | `docker rm <container-ID>` |
+| List images | `docker images` |
+| Remove an image | `docker rmi <image-name>` |
+| Pull an image manually | `docker pull <image-name>` |
+
+---
+
+#### Docker Run in Detail
+
+##### 1. Running Specific Versions of Images (Tags)
+
+- **Concept:**
+    
+    Docker images have different versions identified by **tags**.
+    
+- **Default Behavior:**
+    - If you don't specify a tag, Docker pulls the image tagged as **`latest`**.
+- **Command to run specific version:**
+    
+    ```bash
+    docker run redis:4.0
+    ```
+    
+- **Explanation:**
+    - `redis` = Image name
+    - `4.0` = Specific version tag
+    - `:` separates image name and version.
+- **Where to find available tags:**
+    - Visit **Docker Hub**.
+    - Check under the image description for available tags.
+
+---
+
+##### 2. Running Containers in Interactive Mode
+
+- **Problem:**
+    
+    By default, Docker containers **do not accept standard input** (non-interactive).
+    
+- **Solution: Use `i` for interactive mode**
+    
+    ```bash
+    docker run -i <image-name>
+    ```
+    
+- **Explanation:**
+    - `i` keeps the standard input (stdin) open for the container even if not attached.
+
+---
+
+##### 3. Attaching a Terminal (Pseudo-TTY)
+
+- **Problem:**
+    
+    Prompts (like "Enter your name:") **don't appear** without terminal attachment.
+    
+- **Solution: Use `t` to allocate a pseudo-TTY**
+    
+    ```bash
+    docker run -t <image-name>
+    ```
+    
+- **Interactive + Terminal together:**
+    
+    ```bash
+    docker run -it <image-name>
+    ```
+    
+- **Explanation:**
+    - `i` for interactive input
+    - `t` for pseudo-terminal
+    - `it` combines both for full interaction with the container.
+
+---
+
+##### 4. Port Mapping / Publishing Ports
+
+- **Problem:**
+    
+    Container ports are **not directly accessible** from outside the Docker host.
+    
+- **Solution: Use `p` to map ports**
+- **Command:**
+    
+    ```bash
+    docker run -p <host-port>:<container-port> <image-name>
+    ```
+    
+- **Example:**
+    
+    ```bash
+    docker run -p 80:5000 my-web-app
+    ```
+    
+- **Explanation:**
+    - Maps port `5000` inside the container to port `80` on the Docker host.
+    - Access app via `http://<Docker-host-IP>:80`.
+- **Important Notes:**
+    - **Container IP** (e.g., 172.17.0.2) is internal, only accessible inside Docker host.
+    - **Docker Host IP** (e.g., 192.168.1.5) is external and can be used if port mapped.
+    - **Cannot map the same host port** to multiple containers.
+- **Multiple Applications Example:**
+    - MySQL instance 1 → Host port 3306 → Container port 3306
+    - MySQL instance 2 → Host port 8306 → Container port 3306
+
+---
+
+##### 5. Data Persistence Using Volumes
+
+- **Problem:**
+    
+    If a container is deleted, **data inside it is lost**.
+    
+- **Solution: Use `v` to mount host directories**
+- **Command:**
+    
+    ```bash
+    docker run -v <host-dir>:<container-dir> <image-name>
+    ```
+    
+- **Example:**
+    
+    ```bash
+    docker run -v /opt/data:/var/lib/mysql mysql
+    ```
+    
+- **Explanation:**
+    - Maps `/opt/data` on the host to `/var/lib/mysql` inside container.
+    - Data stored in `/opt/data` **persists** even if the container is deleted.
+
+---
+
+##### 6. Viewing Detailed Container Information
+
+- **Command:**
+    
+    ```bash
+    docker inspect <container-id or container-name>
+    ```
+    
+- **Explanation:**
+    - Displays detailed JSON output including:
+        - State
+        - Mounts
+        - Network settings
+        - Configuration details
+
+---
+
+##### 7. Viewing Container Logs
+
+- **Command:**
+    
+    ```bash
+    docker logs <container-id or container-name>
+    ```
+    
+- **Explanation:**
+    - Shows all standard output logs from a container.
+    - Useful for containers running in **detached mode** (`d`).
+
+---
+
+### 🔥 Quick Command Summary
+
+| Action | Command Example | Description |
+| --- | --- | --- |
+| Run container with tag | `docker run redis:4.0` | Run specific version of image |
+| Interactive mode | `docker run -i ubuntu` | Keep STDIN open |
+| Pseudo-terminal | `docker run -t ubuntu` | Allocate TTY |
+| Interactive + TTY | `docker run -it ubuntu` | Full interactive terminal session |
+| Port mapping | `docker run -p 80:5000 webapp` | Map host port to container port |
+| Mount volume | `docker run -v /opt/data:/var/lib/mysql mysql` | Persist container data outside |
+| Inspect container | `docker inspect container-id` | View detailed container info |
+| View logs | `docker logs container-id` | View container logs |
