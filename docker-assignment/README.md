@@ -64,6 +64,7 @@ docker-compose up --build
 - Add typing indicators
 - Support for image and file sharing
 
-## License
+## Running Demo
 
-MIT
+https://github.com/user-attachments/assets/d38c3358-f6ed-459d-9783-c63dcfffb3dd
+
