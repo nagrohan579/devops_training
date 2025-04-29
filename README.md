@@ -42,7 +42,12 @@ This repository is dedicated to tracking my journey through DevOps training at C
      - [Docker Installation Guide](#docker-installation-guide)
      - [Basic Docker Commands](#basic-docker-commands)
      - [Docker Run in Detail](#docker-run-in-detail)
-
+    - [Dockerizing a Simple Python Flask Application](#dockerizing-a-simple-python-flask-application)
+      - [Manual Deployment Steps](#manual-deployment-steps)
+      - [Dockerizing the Application](#dockerizing-the-application)
+      - [Build and Run the Docker Image](#build-and-run-the-docker-image)
+      - [Pushing the Docker Image to Docker Hub](#pushing-the-docker-image-to-docker-hub)
+      - [Conclusion](#conclusion)
 ---
 
 ## Part 1: Foundations of DevOps and Cloud Computing - Week 1-2
@@ -1169,3 +1174,132 @@ Open the **terminal** inside the Ubuntu VM and follow these steps:
 | Mount volume | `docker run -v /opt/data:/var/lib/mysql mysql` | Persist container data outside |
 | Inspect container | `docker inspect container-id` | View detailed container info |
 | View logs | `docker logs container-id` | View container logs |
+
+---
+
+## Dockerizing a Simple Python Flask Application
+
+### Application Overview
+
+This section demonstrates how to containerize a basic Python Flask web application using Docker. The application exposes two endpoints:
+
+- `/` returns a "Welcome" message.
+- `/how-are-you` returns "I'm good, how about you?"
+
+You can find the implementation in:
+- [my-simple-webapp-flask/app.py](my-simple-webapp-flask/app.py)
+- [my-simple-webapp-flask/Dockerfile](my-simple-webapp-flask/Dockerfile)
+
+---
+
+### Manual Deployment Steps
+
+To manually deploy the application on an Ubuntu host:
+
+1. **Install Python**:
+    ```bash
+    apt-get update
+    apt-get install -y python3
+    ```
+
+2. **Install pip**:
+    ```bash
+    apt-get install -y python3-pip
+    ```
+
+3. **Install Flask**:
+    ```bash
+    pip3 install flask
+    ```
+
+4. **Deploy the Application**:
+    ```bash
+    cp /path/to/app.py /opt/app.py
+    flask --app /opt/app.py run --host=0.0.0.0
+    ```
+
+Once running, access the app at `http://<host-ip>:5000`.
+
+---
+
+### Dockerizing the Application
+
+1. **Create a Dockerfile**:  
+   The Dockerfile defines the steps to containerize the application:
+   - Use the official Ubuntu image.
+   - Install Python, pip, and Flask.
+   - Copy `app.py` into the container.
+   - Set the entrypoint to run the Flask app.
+
+2. **Dockerfile Example** ([my-simple-webapp-flask/Dockerfile](my-simple-webapp-flask/Dockerfile)):
+    ```docker
+    FROM ubuntu
+
+    RUN apt-get update && apt-get install -y python3 python3-pip python3-flask
+
+    COPY app.py /opt/app.py
+
+    ENTRYPOINT ["flask", "--app", "/opt/app.py", "run", "--host=0.0.0.0"]
+    ```
+
+#### Explanation:
+
+- `FROM ubuntu`: Uses Ubuntu as the base image.
+- `RUN ...`: Installs Python 3, pip, and Flask.
+- `COPY app.py /opt/app.py`: Copies the application code.
+- `ENTRYPOINT ...`: Runs the Flask app on container start.
+
+---
+
+### Build and Run the Docker Image
+
+1. **Build the Docker Image** (run in the [my-simple-webapp-flask](my-simple-webapp-flask/) directory):
+    ```bash
+    docker build -t my-simple-webapp .
+    ```
+
+2. **Run the Docker Container**:
+    ```bash
+    docker run -d -p 5000:5000 my-simple-webapp
+    ```
+
+3. **Access the Application**:
+    - [http://localhost:5000](http://localhost:5000) for the root endpoint.
+    - [http://localhost:5000/how-are-you](http://localhost:5000/how-are-you) for the second endpoint.
+
+---
+
+### Pushing the Docker Image to Docker Hub
+
+1. **Tag the Image**:
+    ```bash
+    docker tag my-simple-webapp yourdockerhubusername/my-simple-webapp
+    ```
+
+2. **Login to Docker Hub**:
+    ```bash
+    docker login
+    ```
+
+3. **Push the Image**:
+    ```bash
+    docker push yourdockerhubusername/my-simple-webapp
+    ```
+
+4. **Pull the Image** (on any machine):
+    ```bash
+    docker pull yourdockerhubusername/my-simple-webapp
+    ```
+
+---
+
+### Conclusion
+
+This section covered:
+
+1. Creating a simple Python Flask application ([my-simple-webapp-flask/app.py](my-simple-webapp-flask/app.py)).
+2. Writing a Dockerfile to containerize it ([my-simple-webapp-flask/Dockerfile](my-simple-webapp-flask/Dockerfile)).
+3. Building and running the Docker image.
+4. Pushing the image to Docker Hub for sharing and reuse.
+
+Containerizing applications with Docker ensures consistent deployments across different environments.
