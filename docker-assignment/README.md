@@ -14,7 +14,7 @@ All services are defined in `docker-compose.yml` and communicate over a Docker n
 
 ### System Diagram
 
-![Chat App Architecture](images\chat-app-diagram.jpg)
+![Chat App Architecture](images/chat-app-diagram.jpg)
 
 - Each frontend container is a separate instance of the same React app, configured via environment variables to represent User A or User B.
 - The backend manages WebSocket connections for both users and routes messages accordingly.
@@ -37,7 +37,7 @@ All services are defined in `docker-compose.yml` and communicate over a Docker n
 3. Run the following command:
 
 ```
-docker-compose up --build
+docker compose up
 ```
 
 This will build and start all services. No other setup is required.
