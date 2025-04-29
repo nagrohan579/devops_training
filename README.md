@@ -48,6 +48,14 @@ This repository is dedicated to tracking my journey through DevOps training at C
       - [Build and Run the Docker Image](#build-and-run-the-docker-image)
       - [Pushing the Docker Image to Docker Hub](#pushing-the-docker-image-to-docker-hub)
       - [Conclusion](#conclusion)
+    - [Environment Variables in Docker](#environment-variables-in-docker)
+    - [Commands, Arguments, and Entrypoints in Docker](#commands-arguments-and-entrypoints-in-docker)
+        - [Understanding Container Lifecycle](#understanding-container-lifecycle)
+        - [CMD Instruction](#cmd-instruction)
+        - [ENTRYPOINT Instruction](#entrypoint-instruction)
+        - [Overriding ENTRYPOINT at runtime](#overriding-entrypoint-at-runtime)
+        - [Important Dockerfile Summary](#important-dockerfile-summary)
+
 ---
 
 ## Part 1: Foundations of DevOps and Cloud Computing - Week 1-2
@@ -1303,3 +1311,111 @@ This section covered:
 4. Pushing the image to Docker Hub for sharing and reuse.
 
 Containerizing applications with Docker ensures consistent deployments across different environments.
+
+---
+
+## Environment Variables in Docker
+
+- **Problem**:  
+  Hardcoding configuration (like background color) in application code is bad practice.
+
+- **Solution**:  
+  Move dynamic values (like `APP_COLOR`) to **environment variables**.
+
+- **How to set environment variables**:
+    - During normal execution:
+        ```bash
+        export APP_COLOR=blue
+        ```
+    - During Docker container run:
+        ```bash
+        docker run -e APP_COLOR=blue image-name
+        ```
+
+- **Deploy multiple containers with different configurations**:  
+  Set different `-e` values each time.
+
+- **View environment variables of a running container**:
+    ```bash
+    docker inspect container-name
+    ```
+    Look under the **Config > Env** section.
+
+---
+
+## Commands, Arguments, and Entrypoints in Docker
+
+### Understanding Container Lifecycle
+
+- **Container behavior**:  
+  A container **runs a process**. If the process ends, the container **stops**.
+
+- **Example**:  
+  Running `docker run ubuntu` without a command → container exits immediately (default bash process tries to find a terminal, fails, and exits).
+
+### CMD Instruction
+
+- **CMD in Dockerfile**:  
+  Specifies the default command for the container when it starts.
+
+- **Example**:  
+  Ubuntu image has CMD as `["bash"]`.
+
+- **Override CMD during run**:
+    ```bash
+    docker run ubuntu sleep 5
+    ```
+    - Runs `sleep 5` instead of default `bash`.
+
+- **Ways to write CMD**:
+    - **Shell form**:
+        ```
+        CMD sleep 5
+        ```
+    - **Exec form (preferred)**:
+        ```
+        CMD ["sleep", "5"]
+        ```
+
+### ENTRYPOINT Instruction
+
+- **ENTRYPOINT**:  
+  Defines a **fixed executable** that **always runs** when the container starts.
+
+- **Behavior**:
+    - Command-line arguments during `docker run` are **appended** to ENTRYPOINT.
+    - Unlike CMD, ENTRYPOINT is **not replaced** by command-line arguments.
+
+- **Example** ([cmd-vs-entrypoint/Dockerfile](cmd-vs-entrypoint/Dockerfile)):
+    ```
+    ENTRYPOINT ["sleep"]
+    CMD ["5"]
+    ```
+    - Default command: `sleep 5`
+    - If you run:
+        ```bash
+        docker run ubuntu-sleeper 10
+        ```
+        It runs: `sleep 10`
+
+- **CMD provides default parameters** when none are passed at runtime.
+
+### Overriding ENTRYPOINT at runtime
+
+- **Use `--entrypoint` option**:
+    ```bash
+    docker run --entrypoint sleep2.0 ubuntu-sleeper 10
+    ```
+    - Changes executable from `sleep` to `sleep2.0`.
+
+---
+
+## Important Dockerfile Summary
+
+| Dockerfile Instruction | Purpose | Behavior |
+| --- | --- | --- |
+| `CMD` | Default command | Replaced if user provides one in `docker run` |
+| `ENTRYPOINT` | Fixed executable | Arguments appended; executable stays the same |
+| `CMD` + `ENTRYPOINT` | Together | ENTRYPOINT + CMD args at startup |
+
+---
