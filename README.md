@@ -55,6 +55,37 @@ This repository is dedicated to tracking my journey through DevOps training at C
         - [ENTRYPOINT Instruction](#entrypoint-instruction)
         - [Overriding ENTRYPOINT at runtime](#overriding-entrypoint-at-runtime)
         - [Important Dockerfile Summary](#important-dockerfile-summary)
+    - [Docker Compose](#docker-compose)
+        - [Docker Basics Recap](#-docker-basics-recap)
+        - [Sample Voting Application Stack (Used Throughout the Course)](#-sample-voting-application-stack-used-throughout-the-course)
+            - [Components](#components)
+            - [Data Flow](#data-flow)
+        - [Running Each Service via docker run](#-running-each-service-via-docker-run)
+        - [Container Communication Using --link (Deprecated)](#-container-communication-using---link-deprecated)
+        - [Docker Compose File (Basic Structure)](#️-docker-compose-file-basic-structure)
+        - [Key Docker Compose Concepts](#-key-docker-compose-concepts)
+        - [Build vs Pull](#-build-vs-pull)
+        - [Networking Differences](#-networking-differences)
+        - [Docker Compose Versions Summary](#-docker-compose-versions-summary)
+        - [Voting App Architecture](#-voting-app-architecture)
+        - [Repository Structure](#-repository-structure)
+        - [Flow of Data](#-flow-of-data)
+        - [Step-by-Step Deployment (Manual Docker)](#-step-by-step-deployment-manual-docker)
+            - [Clone Repo](#1️⃣-clone-repo)
+            - [Deploy redis (Detached)](#2️⃣-deploy-redis-detached)
+            - [Build & Run vote App](#3️⃣-build--run-vote-app)
+            - [Deploy postgres (Named db, Detached)](#4️⃣-deploy-postgres-named-db-detached)
+            - [Build & Run worker App](#5️⃣-build--run-worker-app)
+            - [Build & Run result App](#6️⃣-build--run-result-app)
+        - [Containers Summary (docker ps)](#-containers-summary-docker-ps)
+        - [Troubleshooting Tips](#-troubleshooting-tips)
+        - [Continuation: Running Voting App with Docker Compose](#-continuation-running-voting-app-with-docker-compose)
+        - [docker-compose.yml file](#️-docker-composeyml-file)
+        - [Explanation of what's happening](#-explanation-of-whats-happening)
+        - [How to run](#-how-to-run)
+        - [Access the Voting Application](#-access-the-voting-application)
+        - [Summary of this step](#-summary-of-this-step)
+
 
 ---
 
@@ -1417,5 +1448,363 @@ Containerizing applications with Docker ensures consistent deployments across di
 | `CMD` | Default command | Replaced if user provides one in `docker run` |
 | `ENTRYPOINT` | Fixed executable | Arguments appended; executable stays the same |
 | `CMD` + `ENTRYPOINT` | Together | ENTRYPOINT + CMD args at startup |
+
+---
+
+---
+
+## Docker Compose
+
+### 🔧 Docker Basics Recap
+
+- Use `docker run` to start individual containers.
+- For complex multi-service applications, use **Docker Compose** with a YAML configuration.
+
+---
+
+### 🐳 Sample Voting Application Stack (Used Throughout the Course)
+
+#### Components
+
+1. **Voting App (Python)**
+    - Lets users vote between *cats* and *dogs*.
+    - Votes stored temporarily in **Redis**.
+2. **Worker (.NET)**
+    - Fetches votes from Redis.
+    - Updates final tally in **PostgreSQL**.
+3. **Result App (Node.js)**
+    - Reads tally from PostgreSQL.
+    - Displays results via web UI.
+
+#### Data Flow
+
+User ➝ Voting App ➝ Redis ➝ Worker ➝ PostgreSQL ➝ Result App
+
+---
+
+### 🐳 Running Each Service via `docker run`
+
+- **Redis:**
+    ```bash
+    docker run -d --name redis redis
+    ```
+- **PostgreSQL:**
+    ```bash
+    docker run -d --name db postgres
+    ```
+- **Voting App:**
+    ```bash
+    docker run -d --name vote -p 5000:80 vote-app
+    ```
+- **Result App:**
+    ```bash
+    docker run -d --name result -p 5001:80 result-app
+    ```
+- **Worker:**
+    ```bash
+    docker run -d --name worker worker-app
+    ```
+
+---
+
+### 🔗 Container Communication Using `--link` (Deprecated)
+
+- Use `--link` to allow inter-container communication by hostname.
+    ```bash
+    docker run --link redis:redis ...
+    ```
+    - Updates `/etc/hosts` with `redis` name pointing to container IP.
+- **Worker needs links to both Redis and PostgreSQL.**
+
+> **Note:** `--link` is deprecated. Docker Compose (v2+) with networking is preferred.
+
+---
+
+### 🛠️ Docker Compose File (Basic Structure)
+
+See: [example-voting-app-main/docker-compose.yml](example-voting-app-main/docker-compose.yml)
+
+---
+
+### 🏗️ Key Docker Compose Concepts
+
+- `services:` – All containers go under this section (from v2 onwards).
+- `build:` – Specifies directory with Dockerfile to build image.
+- `image:` – For prebuilt/public images (like `redis`, `postgres`).
+- `ports:` – Host:Container port mappings.
+- `depends_on:` – Define startup order (e.g., vote depends on redis).
+
+---
+
+### 📁 Build vs Pull
+
+- Use `image:` if pulling from Docker Hub.
+- Use `build:` if building from local directory with a Dockerfile.
+
+---
+
+### 🌐 Networking Differences
+
+- **v1:** All containers attached to the default bridge network. Use `links`.
+- **v2+:** Docker Compose creates a new bridge network automatically. Services can talk to each other using service names (no need for `links`).
+
+---
+
+### 🧾 Docker Compose Versions Summary
+
+| Feature | Version 1 | Version 2+ |
+| --- | --- | --- |
+| File structure | Flat service definitions | Nested under `services:` |
+| Networking | Default bridge + `links` | Automatic app-specific network |
+| Startup order | ❌ Not supported | ✅ `depends_on:` available |
+| Version declaration | ❌ Not required | ✅ `version: '2'` required |
+
+---
+
+## 🧱 Voting App Architecture
+
+The Example Voting App is a **multi-tier application** with 5 main components:
+
+| Component | Language / Tech | Purpose |
+| --- | --- | --- |
+| `vote` | Python + Flask | Frontend web app to cast votes (cats/dogs) |
+| `redis` | Redis | Queue to temporarily store votes |
+| `worker` | .NET | Pulls vote from Redis → saves to Postgres |
+| `db` (postgres) | PostgreSQL | Stores votes persistently |
+| `result` | Node.js + Express | Displays voting results |
+
+---
+
+## 📂 Repository Structure
+
+- [`example-voting-app-main/vote/`](example-voting-app-main/vote/) → Flask app (Python)
+- [`example-voting-app-main/worker/`](example-voting-app-main/worker/) → Worker app (.NET)
+- [`example-voting-app-main/result/`](example-voting-app-main/result/) → Result app (Node.js)
+- [`example-voting-app-main/docker-compose.yml`](example-voting-app-main/docker-compose.yml), `stack.yml`
+
+---
+
+## 🔄 Flow of Data
+
+1. User votes on `vote` app
+2. Vote is pushed to **Redis**
+3. `worker` fetches vote from Redis, inserts into **Postgres**
+4. `result` app queries Postgres and displays the current tally
+
+---
+
+## 🔧 Step-by-Step Deployment (Manual Docker)
+
+### 1️⃣ Clone Repo
+
+```bash
+git clone https://github.com/dockersamples/example-voting-app.git
+cd example-voting-app
+```
+
+---
+
+### 2️⃣ Deploy `redis` (Detached)
+
+```bash
+docker run -d --name redis redis
+```
+
+---
+
+### 3️⃣ Build & Run `vote` App
+
+```bash
+cd vote
+docker build -t voting-app .
+docker run -d --name vote --link redis -p 5000:80 voting-app
+```
+
+- Web UI accessible at: `http://localhost:5000`
+- Votes won't work yet → Redis exists, but worker & DB are missing
+
+---
+
+### 4️⃣ Deploy `postgres` (Named `db`, Detached)
+
+```bash
+docker run -d --name db -e POSTGRES_PASSWORD=example postgres:9.4
+```
+
+---
+
+### 5️⃣ Build & Run `worker` App
+
+```bash
+cd ../worker
+docker build -t worker-app .
+docker run -d --name worker --link redis --link db worker-app
+```
+
+---
+
+### 6️⃣ Build & Run `result` App
+
+```bash
+cd ../result
+docker build -t result-app .
+docker run -d --name result --link db -p 5001:80 result-app
+```
+
+- Result UI at: `http://localhost:5001`
+
+---
+
+## 🐳 Containers Summary (`docker ps`)
+
+| Container | Port | Links | Purpose |
+| --- | --- | --- | --- |
+| vote | 5000:80 | redis | Frontend |
+| redis | - | - | Queue |
+| worker | - | redis, db | Redis → Postgres bridge |
+| db | - | - | Database |
+| result | 5001:80 | db | Result visualizer |
+
+---
+
+## 🧪 Troubleshooting Tips
+
+- `500 Internal Server Error` → Happens if `redis` isn't running or linked properly.
+- `Container name already in use` → Use `docker rm <name>` before recreating.
+- Logs helpful: `docker logs <container>`.
+
+---
+
+## 📖 Continuation: Running Voting App with Docker Compose
+
+Now that we have individual services for the voting app, result app, worker, Redis, and Postgres, let's simplify everything using **Docker Compose**.
+
+Instead of running each container manually, we'll describe everything in a single file called [`docker-compose.yml`](example-voting-app-main/docker-compose.yml). Docker Compose will take care of building images, creating containers, connecting them via networks, and managing their dependencies.
+
+---
+
+## 🛠 [`docker-compose.yml`](example-voting-app-main/docker-compose.yml) file
+
+```yaml
+services:
+  vote:
+    build:
+      context: ./vote
+      target: dev
+    depends_on:
+      - redis
+    volumes:
+      - ./vote:/usr/local/app
+    ports:
+      - "8080:80"
+    networks:
+      - front-tier
+      - back-tier
+
+  result:
+    build: ./result
+    entrypoint: nodemon --inspect=0.0.0.0 server.js
+    depends_on:
+      - db
+    volumes:
+      - ./result:/usr/local/app
+    ports:
+      - "8081:80"
+      - "127.0.0.1:9229:9229"
+    networks:
+      - front-tier
+      - back-tier
+
+  worker:
+    build:
+      context: ./worker
+    depends_on:
+      - redis
+      - db
+    networks:
+      - back-tier
+
+  redis:
+    image: redis:alpine
+    networks:
+      - back-tier
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+      - "db-data:/var/lib/postgresql/data"
+    networks:
+      - back-tier
+
+  seed:
+    build: ./seed-data
+    profiles: ["seed"]
+    depends_on:
+      - vote
+    networks:
+      - front-tier
+    restart: "no"
+
+volumes:
+  db-data:
+
+networks:
+  front-tier:
+  back-tier:
+```
+
+---
+
+## 🧠 Explanation of what's happening
+
+| Service | Purpose | Details |
+| --- | --- | --- |
+| `vote` | Front-end Voting App (Python Flask) | Listens on port 8080, connects to Redis to store votes. Code mounted for live changes. |
+| `result` | Results App (Node.js) | Listens on port 8081, connects to Postgres DB to read results. Uses `nodemon` for live reloading during development. |
+| `worker` | Background Processor | Fetches votes from Redis and updates Postgres with the counted votes. |
+| `redis` | In-memory Data Store | Temporary store for incoming votes. Very fast. |
+| `db` | Database (Postgres) | Permanent store for final vote counts. |
+| `seed` | (Optional) Seed Data Generator | Populates the app with some initial data, runs once if you specify the `seed` profile manually. |
+
+Two separate **networks** are used:
+
+- `front-tier`: For communication between front-end apps and Redis.
+- `back-tier`: For communication between worker, Redis, and database.
+
+The `db-data` **volume** ensures that Postgres data persists even if the container is restarted.
+
+---
+
+## ▶️ How to run
+
+Simply run:
+
+```bash
+docker compose up
+```
+
+You should start seeing all services starting up in the logs.
+
+---
+
+## 🌐 Access the Voting Application
+
+- Open your browser and go to: [http://localhost:8080](http://localhost:8080/)
+    - Here, you can **cast your vote** (for example, "Cats" vs "Dogs").
+- Then open another tab: [http://localhost:8081](http://localhost:8081/)
+    - Here, you can **see the real-time voting results** updating.
+
+---
+
+## 📋 Summary of this step
+
+- Used `docker-compose.yml` to define everything needed.
+- One command (`docker compose up`) to build and start everything.
+- Voting UI available at **localhost:8080**.
+- Results available at **localhost:8081**.
+- Live code reloading if you change Python or Node.js code (because of volumes + dev settings).
 
 ---
