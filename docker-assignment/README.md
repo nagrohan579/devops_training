@@ -1,4 +1,4 @@
-# Localhost Chat Application
+# Localhost Chat Application - Assignment: Use Docker to containerize an application and demo
 
 A real-time chat application using Docker and WebSockets that simulates communication between two users on a localhost environment.
 
@@ -10,7 +10,7 @@ This application is fully containerized and orchestrated using Docker Compose. I
 - **FrontendB**: React.js app for User B (exposed on port 3001)
 - **Backend**: Python FastAPI WebSocket server (exposed on port 5000)
 
-All services are defined in `docker-compose.yml` and communicate over a Docker network. The frontend containers connect to the backend using the Docker service name (`backend`) as the host, ensuring reliable service discovery within the Docker network.
+All services are defined in [`docker-compose.yml`](./docker-compose.yml) and communicate over a Docker network. The frontend containers connect to the backend using the Docker service name (`backend`) as the host, ensuring reliable service discovery within the Docker network.
 
 ### System Diagram
 
@@ -33,7 +33,7 @@ All services are defined in `docker-compose.yml` and communicate over a Docker n
 ### Steps to Run
 
 1. Clone this repository
-2. Navigate to the `docker-assignment` directory
+2. Navigate to the [`docker-assignment`](.) directory
 3. Run the following command:
 
 ```
@@ -52,13 +52,13 @@ This will build and start all services. No other setup is required.
 ```
 docker-assignment/
 ├── frontend/           # React application
-│   ├── Dockerfile
+│   ├── [Dockerfile](./frontend/Dockerfile)
 │   └── src/            # React components and styling
 ├── backend/            # Python WebSocket server 
-│   ├── Dockerfile
-│   └── server.py       # FastAPI WebSocket implementation
-├── docker-compose.yml  # Container orchestration
-└── README.md           # Project documentation
+│   ├── [Dockerfile](./backend/Dockerfile)
+│   └── [server.py](./backend/server.py)       # FastAPI WebSocket implementation
+├── [docker-compose.yml](./docker-compose.yml)  # Container orchestration
+└── [README.md](./README.md)           # Project documentation
 ```
 
 ## Issues Faced

@@ -85,6 +85,7 @@ This repository is dedicated to tracking my journey through DevOps training at C
         - [How to run](#-how-to-run)
         - [Access the Voting Application](#-access-the-voting-application)
         - [Summary of this step](#-summary-of-this-step)
+    - [Assignment: Use Docker to containerize an application and demo](docker-assignment/README.md)
 
 
 ---
@@ -518,7 +519,6 @@ This phase involves maintaining and managing the application and infrastructure 
 **Key Activities:**
 - Responding to incidents and outages
 - Scaling infrastructure based on demand
-- Performing backups and disaster recovery
 - Routine maintenance (patches, updates)
 - Optimizing performance and cost
 
