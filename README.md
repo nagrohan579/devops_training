@@ -2510,9 +2510,6 @@ cat app.py
 
 ---
 
-Here are **detailed, no-BS notes** on **Docker Networking** based on the transcript:
-
----
 
 ## 🔗 Docker Networking
 
@@ -2650,8 +2647,4 @@ This enables containers to:
 | **bridge** | Default network with internal IPs | Port mapping required | Yes | Most common use |
 | **host** | Shares host network stack | No mapping needed | No | Low-latency, trusted services |
 | **none** | No networking | None | Full | Secure/sandboxed containers |
-
----
-
-Would you like a diagram or CLI commands summary next?
 
