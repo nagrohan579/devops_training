@@ -85,6 +85,46 @@ This repository is dedicated to tracking my journey through DevOps training at C
         - [How to run](#-how-to-run)
         - [Access the Voting Application](#-access-the-voting-application)
         - [Summary of this step](#-summary-of-this-step)
+    - [🐳 Docker Registry](#-docker-registry)
+      - [What is a Docker Registry?](#-what-is-a-docker-registry)
+      - [Image Naming Convention](#-image-naming-convention)
+      - [Pulling & Running Images](#-pulling--running-images)
+      - [Pushing & Pulling from Registries](#-pushing--pulling-from-registries)
+      - [Using Private Registries](#-using-private-registries)
+      - [Hosting Your Own Private Registry](#-hosting-your-own-private-registry)
+      - [Practice](#-practice)
+    - [Docker Engine Architecture](#-docker-engine-architecture)
+      - [How Docker Containers Achieve Isolation](#-how-docker-containers-achieve-isolation)
+      - [Resource Management](#-resource-management)
+      - [Summary](#-summary)
+    - [Docker PID](#docker-pid)
+      - [Inspecting Processes Inside the Container](#-inspecting-processes-inside-the-container)
+      - [Key Concept: PID Namespace](#-key-concept-pid-namespace)
+    - [Docker Image & Container Storage Architecture](#-docker-image--container-storage-architecture)
+      - [Layered Architecture of Docker Images](#-layered-architecture-of-docker-images)
+      - [Layer Reuse Example](#-layer-reuse-example)
+      - [Image Layers Are Read-Only](#-image-layers-are-read-only)
+      - [Containers and the Writable Layer](#-containers-and-the-writable-layer)
+      - [Copy-on-Write Mechanism](#-copy-on-write-mechanism)
+      - [Writable Layer Stores](#-writable-layer-stores)
+      - [Data Loss Warning](#-data-loss-warning)
+      - [Persisting Data with Volumes and Mounts](#-persisting-data-with-volumes-and-mounts)
+      - [Auto Volume Creation](#-auto-volume-creation)
+      - [Bind Mounting (Host-controlled)](#-bind-mounting-host-controlled)
+      - [New -mount Syntax (Modern Recommended Style)](#-new--mount-syntax-modern-recommended-style)
+      - [Storage Drivers: The Backend Mechanism](#-storage-drivers-the-backend-mechanism)
+      - [Summary](#-summary-1)
+    - [Docker File System: Where and How Data is Stored](#-docker-file-system-where-and-how-data-is-stored)
+      - [Storage Drivers](#-storage-drivers)
+      - [Checking the Storage Driver](#-checking-the-storage-driver)
+      - [AUFS Folder Structure](#-aufs-folder-structure)
+      - [Example 1: Pulling a Docker Image (hello-world)](#-example-1-pulling-a-docker-image-hello-world)
+      - [Docker History Command](#-docker-history-command)
+      - [Example 2: Building a Custom Flask Web App Image](#-example-2-building-a-custom-flask-web-app-image)
+      - [Build Caching and Layer Reuse](#-build-caching-and-layer-reuse)
+      - [Docker History of Custom Image](#-docker-history-of-custom-image)
+      - [Inspecting AUFS Layer Contents](#-inspecting-aufs-layer-contents)
+      - [Layer Optimization Insight](#-layer-optimization-insight)
     - [Assignment: Use Docker to containerize an application and demo](docker-assignment/README.md)
 
 
@@ -1806,5 +1846,667 @@ You should start seeing all services starting up in the logs.
 - Voting UI available at **localhost:8080**.
 - Results available at **localhost:8081**.
 - Live code reloading if you change Python or Node.js code (because of volumes + dev settings).
+
+---
+
+## 🐳 Docker Registry
+
+---
+
+### 🔍 What is a Docker Registry?
+
+- A **Docker Registry** is a **central repository** for storing Docker images.
+- Think of it as the **"cloud"** from which containers **(the "rain")** are pulled.
+- Default public registry: **Docker Hub** (`docker.io`).
+- Contains official, verified, and user-contributed images.
+
+---
+
+### 📦 Image Naming Convention
+
+Docker images follow this naming structure:
+
+```
+[registry-hostname/][username-or-org/]repository[:tag]
+```
+
+#### Examples:
+
+| Image | Full Name | Explanation |
+| --- | --- | --- |
+| `nginx` | `docker.io/library/nginx` | `library` indicates it's an **official image** on Docker Hub. |
+| `myuser/myapp` | `docker.io/myuser/myapp` | Image under the **Docker Hub account `myuser`**. |
+| `localhost:5000/myimage` | `localhost:5000/myimage` | **Private registry** running on the same machine. |
+
+---
+
+### 🔄 Pulling & Running Images
+
+- Command:
+    
+    ```bash
+    docker run nginx
+    ```
+    
+- This pulls the image `nginx` from the default registry (`docker.io/library/nginx`) and runs it.
+- If no registry is specified, Docker assumes it's from Docker Hub.
+
+---
+
+### 🧳 Pushing & Pulling from Registries
+
+#### Public Registries
+
+- **Popular Registries**:
+    - Docker Hub: `docker.io`
+    - Google Container Registry: `gcr.io`
+    - GitHub Container Registry: `ghcr.io`
+- These allow public access and can be used for CI/CD and deployments.
+
+#### Private Registries
+
+- For internal or enterprise use.
+- Can be:
+    - Hosted yourself using the Docker Registry image.
+    - Provided by cloud providers like:
+        - AWS (ECR)
+        - Azure (ACR)
+        - Google Cloud (GCR private)
+
+---
+
+### 🔐 Using Private Registries
+
+#### 1. Login
+
+```bash
+docker login <registry-url>
+```
+
+- Enter your **username** and **password/token**.
+
+#### 2. Pull/Push Image
+
+```bash
+docker pull <registry-url>/<repo>:<tag>
+docker push <registry-url>/<repo>:<tag>
+```
+
+If you're not logged in, you'll get an **"image not found"** or **unauthorized** error.
+
+---
+
+### 🏠 Hosting Your Own Private Registry
+
+#### Run Docker Registry Container
+
+```bash
+docker run -d -p 5000:5000 --name registry registry
+```
+
+- Pulls the `registry` image.
+- Exposes the Docker Registry API on **port 5000**.
+
+#### Tag and Push Image
+
+```bash
+docker tag myimage localhost:5000/myimage
+docker push localhost:5000/myimage
+```
+
+#### Pull From It Later
+
+- On same host:
+    
+    ```bash
+    docker pull localhost:5000/myimage
+    ```
+    
+- On another host:
+    
+    ```bash
+    docker pull <host-ip>:5000/myimage
+    ```
+    
+
+📝 Note: You may need to configure Docker daemon to allow **insecure registries** if using HTTP.
+
+---
+
+### 🧪 Practice
+
+- Try setting up your **own registry** on port `5000`.
+- Build and tag a custom image.
+- Push it to the local registry.
+- Pull and run it on another host (or from the same host).
+
+---
+
+## 🧠 Docker Engine Architecture
+
+#### 🔧 Components
+
+When Docker is installed on a Linux host, the following components are set up:
+
+1. **Docker Daemon (`dockerd`)**
+    - Background service.
+    - Manages Docker objects: images, containers, volumes, networks.
+    - Listens for Docker API requests.
+2. **Docker REST API**
+    - Interface for interacting with the daemon programmatically.
+    - Allows external tools or scripts to manage Docker.
+3. **Docker CLI**
+    - Command-line interface used to issue commands (e.g., `docker run`, `docker stop`).
+    - Internally communicates with the Docker daemon via REST API.
+
+> 💡 CLI can be remote: You can run the Docker CLI on a separate machine and connect to a remote Docker Engine using:
+> 
+
+```bash
+docker -H <remote-host-ip>:2375 run nginx
+```
+
+---
+
+### 🧱 How Docker Containers Achieve Isolation
+
+Docker relies on **Linux kernel features** to isolate containers:
+
+#### 🔒 Namespaces
+
+- Namespaces provide isolation for:
+    - **PID (Process IDs)**
+    - **Network**
+    - **Mounts**
+    - **IPC (Inter-process communication)**
+    - **UTS (hostname/timezone)**
+
+#### ➕ Example: PID Namespace
+
+- On host boot, the first process has PID `1`.
+- All further processes get unique PIDs (`2, 3, ...`).
+- When a container is started:
+    - Its main process also has PID `1` *inside the container*.
+    - On the host, this process may have PID `5000`, for example.
+    - Same process → two PIDs:
+        - One in the host namespace (`5000`)
+        - One in the container namespace (`1`)
+
+```bash
+# Inside the container
+ps aux        # shows nginx PID as 1
+
+# On the host
+ps aux | grep nginx   # shows nginx PID as e.g., 5000
+```
+
+This gives the illusion of full independence for the container.
+
+---
+
+### 🧠 Resource Management
+
+By default, **containers can use all available CPU and memory**, which may starve the host or other containers.
+
+#### ⚙️ Control Groups (cgroups)
+
+Docker uses **cgroups** to manage and limit resource usage.
+
+#### 🧮 CPU Limits
+
+```bash
+docker run --cpus=".5" nginx
+```
+
+- Limits container to **50% of CPU**.
+
+#### 🧠 Memory Limits
+
+```bash
+docker run --memory="100m" nginx
+```
+
+- Limits container to **100 MB of RAM**.
+
+These options help prevent a single container from consuming excessive resources.
+
+---
+
+### ✅ Summary
+
+- Docker Engine = Daemon + REST API + CLI
+- Containers are **isolated via namespaces** (e.g., PID namespace tricks container into thinking it has its own PID `1`).
+- **Control groups (cgroups)** manage how much **CPU and memory** a container can use.
+- **Docker CLI can work remotely** using `H <host>:port`.
+- All containers share the host's OS kernel, but think they’re independent due to namespace isolation.
+
+---
+
+## Docker PID
+
+#### 🔍 Step-by-Step:
+
+1. **Search for `tomcat`** on Docker Hub.
+2. **Use an image run command with port mapping**:
+    
+    ```bash
+    docker run -p 8888:8080 tomcat
+    ```
+    
+    - Maps container’s port `8080` to host’s port `8888`.
+    - Runs in foreground, shows Tomcat startup logs.
+3. **Access Tomcat Web UI**:
+    - Open browser to `http://<host-ip>:8888`
+    - Confirms container is running.
+4. **Stop container (if foreground)**:
+    - Use `Ctrl + C`.
+5. **Run container in background**:
+    
+    ```bash
+    docker run -d -p 8888:8080 tomcat
+    ```
+    
+    - `d` runs in detached mode (background).
+6. **Verify running container**:
+    
+    ```bash
+    docker ps
+    ```
+    
+    - Confirms Tomcat container is active.
+
+---
+
+### 🔍 Inspecting Processes Inside the Container
+
+1. **Run command inside container**:
+    
+    ```bash
+    docker exec <container_id> ps -eaf
+    ```
+    
+    - Lists all processes in the container.
+    - Tomcat runs as PID `1` inside the container.
+2. **Verify process on the Docker host**:
+    
+    ```bash
+    ps -eaf | grep java
+    ```
+    
+    - Same process appears with a different PID (e.g., `3250`).
+    - Confirms that it's the same process with two different PIDs due to namespace isolation.
+
+---
+
+### 🔒 Key Concept: PID Namespace
+
+- **Inside the container**: Process has PID `1` → appears as root process.
+- **On the host**: Same process has a different PID (e.g., `3250`).
+- **Namespace allows one process to have different PIDs** depending on context:
+    - Isolated inside container.
+    - Mapped differently on host.
+- This is a core mechanism behind Docker's container isolation.
+
+---
+
+## 📦 Docker Image & Container Storage Architecture
+
+### 🔹 Layered Architecture of Docker Images
+
+- Docker builds images **layer by layer**, where **each instruction** in the `Dockerfile` creates a **new image layer**.
+- **Each layer contains only the changes** made from the previous one.
+
+**Example Layers:**
+1. `FROM ubuntu` → base layer (~120 MB)
+2. `RUN apt-get install` → APT packages (~300 MB)
+3. `RUN pip install flask` → Python packages
+4. `COPY . /app` → Application source code
+5. `ENTRYPOINT` → Entry point of app
+- Layers are **cached and reused** if unchanged, which:
+    - **Speeds up builds**
+    - **Saves disk space**
+
+### 🔹 Layer Reuse Example
+
+- If two apps use:
+    - The **same base image**
+    - **Same dependencies**, but **different source code**
+
+→ Docker reuses **common layers** from the cache and **only rebuilds the differing ones** (e.g., app code, entrypoint).
+
+### 🔹 Image Layers Are Read-Only
+
+- Once built, image layers are **immutable (read-only)**.
+- Changes to these require **a rebuild** (`docker build`).
+
+---
+
+### 🐳 Containers and the Writable Layer
+
+#### 🔹 What Happens on `docker run`
+
+- Docker **adds a writable container layer** on top of the image.
+- This writable layer is:
+    - **Read-Write**
+    - **Ephemeral** (deleted when the container is removed)
+
+#### 🔹 Copy-on-Write Mechanism
+
+- If a file in the image is modified inside a container:
+    - Docker **copies it** from the image to the container’s **writable layer**
+    - Edits happen **only** on this copy
+- The **image layer remains untouched**
+
+#### 🔹 Writable Layer Stores:
+
+- Logs
+- Temp files
+- App-generated files
+- User-modified files (e.g., creating `temp.txt` inside the container)
+
+#### 🔹 Data Loss Warning
+
+- **Destroying the container** = **losing all writable layer data**
+
+---
+
+#### 💾 Persisting Data with Volumes and Mounts
+
+#### 🔹 Volume Mounting (Managed by Docker)
+
+- Create a Docker-managed volume:
+    
+    ```bash
+    docker volume create data_volume
+    ```
+    
+- Mount it to a container:
+    
+    ```bash
+    docker run -v data_volume:/var/lib/mysql mysql
+    ```
+    
+- Volume stored at: `/var/lib/docker/volumes/`
+- Data **persists** even if the container is deleted.
+
+#### 🔹 Auto Volume Creation
+
+- If you run:
+    
+    ```bash
+    docker run -v data_volume2:/var/lib/mysql mysql
+    ```
+    
+    without pre-creating `data_volume2`, Docker **auto-creates it**.
+    
+
+#### 🔹 Bind Mounting (Host-controlled)
+
+- Used when data exists on host at a specific path:
+    
+    ```bash
+    docker run -v /data/mysql:/var/lib/mysql mysql
+    ```
+    
+- **Mounts existing host directory** (`/data/mysql`) into container.
+- Offers **more control**, but **less isolation**.
+
+---
+
+#### 🆕 `-mount` Syntax (Modern Recommended Style)
+
+#### 🔹 Format:
+
+```bash
+docker run \
+  --mount type=bind,source=/data/mysql,target=/var/lib/mysql \
+  mysql
+```
+
+- More **explicit and readable**
+- Parameters:
+    - `type` = `bind` or `volume`
+    - `source` = path on host or volume name
+    - `target` = path inside container
+
+---
+
+#### ⚙️ Storage Drivers: The Backend Mechanism
+
+#### 🔹 Role of Storage Drivers
+
+- Implement Docker’s layered filesystem
+- Handle:
+    - Layer stacking
+    - Writable layers
+    - Copy-on-write
+
+#### 🔹 Common Storage Drivers:
+
+| Driver | Notes |
+| --- | --- |
+| **AUFS** | Default on Ubuntu; supports layering well |
+| **overlay2** | Preferred for most modern distros; fast and stable |
+| **Btrfs** | Advanced FS features (snapshots, quotas); needs Btrfs support |
+| **ZFS** | Rich features but heavy and complex |
+| **Device Mapper** | Supported on RHEL/CentOS; slower but stable |
+- Docker **auto-selects** the best available driver for your OS.
+
+---
+
+#### 🔚 Summary
+
+- Docker **builds images in layers**: efficient, cacheable, and read-only.
+- Containers get a **writable layer** on top of the image.
+- To **persist data**, use **volumes or bind mounts**.
+- Under the hood, **storage drivers** manage the layered architecture and performance characteristics.
+
+---
+
+### 📁 Docker File System: Where and How Data is Stored
+
+#### 📌 Default Storage Path
+
+- When Docker is installed, it **creates a default storage directory**:
+    
+    ```
+    /var/lib/docker
+    ```
+    
+- Inside this directory, Docker **manages all data** related to:
+    - Images
+    - Containers
+    - Layers
+    - Networks
+    - Volumes
+    - Plugins
+
+#### 📂 Key Directories Inside `/var/lib/docker`
+
+| Directory | Purpose |
+| --- | --- |
+| `containers/` | Metadata and filesystem data for running and stopped containers |
+| `image/` | Image data (can vary by storage driver used) |
+| `network/` | Network configuration and bridge networks |
+| `plugins/` | Plugin files |
+| `swarm/` | Swarm-specific data if Docker Swarm mode is used |
+| `aufs/` (or `overlay2/`) | Stores layered filesystems (depends on storage driver) |
+
+---
+
+## 🧱 Storage Drivers
+
+#### 🔧 What is a Storage Driver?
+
+- Responsible for **managing image layers and container filesystems**.
+- It controls how Docker **creates, stores, and mounts** these layers.
+
+#### 🚀 Checking the Storage Driver
+
+- Use `docker info` to view current storage driver.
+    
+    ```
+    docker info
+    ```
+    
+- Example output:
+    
+    ```
+    Storage Driver: aufs
+    Root Dir: /var/lib/docker/aufs
+    ```
+    
+
+#### 📂 AUFS Folder Structure
+
+When using the **AUFS** storage driver, Docker creates:
+
+| Folder | Description |
+| --- | --- |
+| `diff/` | Contains **actual contents of each layer** (each layer is a folder) |
+| `layers/` | Stores **metadata** describing how layers stack on top of each other |
+| `mnt/` | Stores **mount points** for containers |
+
+---
+
+## 👋 Example 1: Pulling a Docker Image (`hello-world`)
+
+#### 🧰 Steps:
+
+1. Pull the image:
+    
+    ```
+    docker pull hello-world
+    ```
+    
+2. View image:
+    
+    ```
+    docker images
+    ```
+    
+3. Explore file system:
+    
+    ```
+    cd /var/lib/docker/aufs/diff
+    ls
+    ```
+    
+
+#### 🧾 What You'll Find:
+
+- A **folder with a random hash name** inside `diff/` containing a file named `hello`
+- This file is the actual script that prints the "Hello from Docker!" message
+
+#### 📜 Docker History Command
+
+- View how the image was built:
+    
+    ```
+    docker history hello-world
+    ```
+    
+
+---
+
+## 👩‍💻 Example 2: Building a Custom Flask Web App Image
+
+#### 📁 Project Structure
+
+- **`app.py`**: Flask application
+- **`Dockerfile`**:
+    
+    ```
+    FROM ubuntu
+    RUN apt-get update && apt-get install -y python3 python3-pip
+    COPY requirements.txt /tmp/
+    RUN pip3 install -r /tmp/requirements.txt
+    COPY app.py /opt/
+    CMD ["python3", "/opt/app.py"]
+    ```
+    
+
+#### ⚙️ Build Image
+
+```bash
+docker build -t simple-web-app .
+```
+
+#### 🐋 What Happens:
+
+- Docker **pulls base image (Ubuntu)**.
+- Installs **Python + pip**.
+- Installs **app dependencies** via `pip`.
+- Copies the app source code into `/opt/`.
+- Sets the **entry point** to run Flask.
+
+---
+
+## ⚡ Build Caching and Layer Reuse
+
+#### 🔁 Rebuilding the Same Dockerfile
+
+- On second build with no changes:
+    - Docker reuses **cached layers**.
+    - Build finishes in **1 second** instead of minutes.
+    - Example output shows: `Using cache`.
+
+#### 🧾 Docker History of Custom Image
+
+- View build steps and layer sizes:
+    
+    ```
+    docker history simple-web-app
+    ```
+    
+- Example output:
+    - Ubuntu base: ~100MB
+    - Python dependencies: ~366MB
+    - App copy: a few KB
+
+---
+
+## 📂 Inspecting AUFS Layer Contents
+
+#### Navigate to Docker storage:
+
+```bash
+cd /var/lib/docker/aufs/diff
+```
+
+#### Use `du -sh *` to see sizes:
+
+- Helps identify which layer corresponds to:
+    - Python libraries (e.g., 376MB)
+    - Ubuntu base (e.g., 100MB)
+    - App code (e.g., 12KB)
+
+#### 🔍 Locate and Inspect App Layer:
+
+```bash
+cd <small-folder>
+ls
+cat app.py
+```
+
+- Confirms your source code is **copied into a layer** as per Dockerfile instruction.
+
+---
+
+## 📈 Layer Optimization Insight
+
+- Docker layers are **built in order** as per Dockerfile.
+- **Unchanged steps** are reused via **layer cache**.
+- If only **source code changes**, only the `COPY` layer and layers above are rebuilt.
+
+---
+
+## Assignment: Setup Helloworld Simple Jenkins CI-CD on Local Setup
+
+---
+
+## Assignment: Use Docker to containerize an application and demo
+
+[docker-assignment/README.md](docker-assignment/README.md)
 
 ---
