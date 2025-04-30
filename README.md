@@ -125,6 +125,15 @@ This repository is dedicated to tracking my journey through DevOps training at C
       - [Docker History of Custom Image](#-docker-history-of-custom-image)
       - [Inspecting AUFS Layer Contents](#-inspecting-aufs-layer-contents)
       - [Layer Optimization Insight](#-layer-optimization-insight)
+    - [Docker Networking](#-docker-networking)
+      - [1. Bridge Network (Default)](#-1-bridge-network-default)
+      - [2. Host Network](#-2-host-network)
+      - [3. None Network](#-3-none-network)
+      - [Creating Custom Bridge Networks](#-creating-custom-bridge-networks)
+      - [Inspecting Network Settings](#-inspecting-network-settings)
+      - [Container-to-Container Communication](#-container-to-container-communication)
+      - [Under the Hood: How Docker Implements Networking](#-under-the-hood-how-docker-implements-networking)
+      - [Summary](#-summary-2)
     - [Assignment: Use Docker to containerize an application and demo](docker-assignment/README.md)
 
 
@@ -2501,12 +2510,148 @@ cat app.py
 
 ---
 
-## Assignment: Setup Helloworld Simple Jenkins CI-CD on Local Setup
+Here are **detailed, no-BS notes** on **Docker Networking** based on the transcript:
 
 ---
 
-## Assignment: Use Docker to containerize an application and demo
+## 🔗 Docker Networking
 
-[docker-assignment/README.md](docker-assignment/README.md)
+When Docker is installed, it **automatically creates three default networks**:
+1. **bridge** – Default network for containers
+2. **none** – Completely isolated network
+3. **host** – Shares host network stack
+
+You can attach containers to custom or default networks using the `--network` parameter when running a container:
+
+```bash
+docker run --network=<network-name> ...
+```
 
 ---
+
+## 🌉 1. Bridge Network (Default)
+
+- **Private internal network** created by Docker.
+- Default network for all containers unless specified otherwise.
+- Containers attached to the bridge get an **internal IP** (typically in the `172.17.0.0/16` range).
+- Containers **can talk to each other** using these internal IPs.
+- To expose a container to the **external world**, you need to **map ports**:
+  
+  ```bash
+  docker run -p <host-port>:<container-port> ...
+  ```
+
+### Example:
+```bash
+docker run -p 8080:80 nginx
+```
+
+> Nginx inside the container on port 80 is accessible externally via host port 8080.
+
+---
+
+## 🖥 2. Host Network
+
+- No network isolation between the Docker container and host.
+- The container uses the **host's network stack directly**.
+- Any service in the container (e.g., a web server on port 5000) is **accessible directly via host IP and same port**, **without port mapping**.
+
+```bash
+docker run --network=host ...
+```
+
+### Trade-off:
+- You **cannot run multiple containers** listening on the same port (e.g., two web servers on port 5000), because they share the same port space.
+
+---
+
+## 🚫 3. None Network
+
+- **No network access at all**.
+- Container is **isolated** from other containers and the outside world.
+- Used for security or sandboxing purposes.
+
+```bash
+docker run --network=none ...
+```
+
+---
+
+## 🏗 Creating Custom Bridge Networks
+
+By default, Docker creates a single bridge network. To **segregate containers** into different internal networks (e.g., `172.x.x.x` or `182.x.x.x`), you can **create a custom network**:
+
+```bash
+docker network create \
+  --driver bridge \
+  --subnet 192.168.100.0/24 \
+  my_custom_net
+```
+
+- **`--driver bridge`**: Specifies the network type.
+- **`--subnet`**: Defines the internal IP range.
+- **`my_custom_net`**: Name of your custom network.
+
+Use `docker network ls` to list all networks.
+
+---
+
+## 🔍 Inspecting Network Settings
+
+To inspect a container’s network configuration:
+
+```bash
+docker inspect <container-id or container-name>
+```
+
+Look under the `"NetworkSettings"` section for:
+- IP address
+- MAC address
+- Network name
+- Gateway
+- DNS info
+
+---
+
+## 🧭 Container-to-Container Communication
+
+Containers can **resolve each other by name** if they are on the same network.
+
+### ✅ Preferred method:
+Use the **container name** as the hostname.
+
+### ❌ Avoid using IPs:
+IPs may change when containers restart or the host reboots.
+
+### Built-in Docker DNS:
+- Docker runs a **built-in DNS server** at `127.0.0.11`.
+- Automatically resolves container names to their IPs.
+
+---
+
+## 🛠️ Under the Hood: How Docker Implements Networking
+
+- Docker uses **Linux network namespaces** to provide isolation.
+- Each container gets its **own network namespace**.
+- Docker uses **virtual Ethernet pairs (veth pairs)** to connect containers:
+  - One end stays in the container.
+  - The other end is attached to a bridge on the host.
+
+This enables containers to:
+- Communicate with each other.
+- Remain isolated from the host unless connected through host networking.
+
+---
+
+## 📝 Summary
+
+| Network Type | Description | External Access | Isolation | Use Case |
+|--------------|-------------|-----------------|-----------|----------|
+| **bridge** | Default network with internal IPs | Port mapping required | Yes | Most common use |
+| **host** | Shares host network stack | No mapping needed | No | Low-latency, trusted services |
+| **none** | No networking | None | Full | Secure/sandboxed containers |
+
+---
+
+Would you like a diagram or CLI commands summary next?
+
