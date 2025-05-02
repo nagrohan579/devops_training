@@ -135,7 +135,21 @@ This repository is dedicated to tracking my journey through DevOps training at C
       - [Under the Hood: How Docker Implements Networking](#-under-the-hood-how-docker-implements-networking)
       - [Summary](#-summary-2)
     - [Assignment: Use Docker to containerize an application and demo](docker-assignment/README.md)
-
+    - [Kubernetes](#kubernetes)
+        - [Kubernetes Cluster Architecture – In-Depth Notes](#-kubernetes-cluster-architecture--in-depth-notes)
+        - [Kubernetes Master Node (Control Plane) Components](#-master-node-control-plane)
+        - [Kubernetes Worker Node Components](#-worker-node)
+        - [Docker, Containerd & Kubernetes – A Detailed Overview](#-docker-containerd--kubernetes--a-detailed-overview)
+        - [Kubernetes CLI Tools Overview](#-cli-tools-overview)
+        - [etcd in Kubernetes](#etcd)
+        - [Kubernetes API Server (kube-apiserver)](#-kubernetes-api-server-kube-apiserver)
+        - [Kube Controller Manager](#kube-controller-manager)
+        - [Kube-Scheduler](#kube-scheduler)
+        - [Kubelet](#kubelet)
+        - [kube-proxy in Kubernetes](#kube-proxy-in-kubernetes)
+        - [Kubernetes Pods - Foundation of Deployment](#-kubernetes-pods---foundation-of-deployment)
+        - [Creating a Pod using a YAML Configuration File in Kubernetes](#creating-a-pod-using-a-yaml-configuration-file-in-kubernetes)
+        - [Kubernetes Pods Lab Session](#kubernetes-pods-lab-session)
 
 ---
 
@@ -2648,3 +2662,1618 @@ This enables containers to:
 | **host** | Shares host network stack | No mapping needed | No | Low-latency, trusted services |
 | **none** | No networking | None | Full | Secure/sandboxed containers |
 
+---
+
+# Kubernetes
+
+## 🔧 Kubernetes Cluster Architecture – In-Depth Notes
+
+Kubernetes is a powerful system designed to manage containerized applications across clusters of machines in an automated and scalable way. The architecture comprises various components divided mainly into **master (control plane)** and **worker nodes**. Each component has a specific responsibility and collaborates with others to maintain the desired state of applications.
+
+---
+
+### 📦 Analogy: Ships and Containers
+
+- Think of **worker nodes** as **cargo ships**: They carry and run actual containers (applications).
+- **Master nodes** are like **control ships**: They manage and monitor cargo ships, make decisions, plan deployments, and maintain overall operations.
+
+---
+
+## 🧠 MASTER NODE (Control Plane)
+
+The master node is responsible for the overall management and orchestration of the cluster. It contains several key components:
+
+### 1. **etcd (Key-Value Store)**
+
+- A **distributed, reliable, and consistent key-value store**.
+- Stores **all cluster data**, including:
+    - Node info
+    - Pod states
+    - Configuration data
+    - Secrets and more.
+- Acts as the **single source of truth**.
+- Highly available and fault-tolerant (usually deployed in a cluster).
+
+---
+
+### 2. **Kube-API Server**
+
+- The **front door** to the Kubernetes cluster.
+- Exposes **RESTful API** for internal components and external users (like `kubectl` or CI/CD pipelines).
+- **All communication**—whether by users, nodes, or controllers—**goes through this server**.
+- Validates and processes requests, updates etcd, and triggers other components.
+
+---
+
+### 3. **Kube-Scheduler**
+
+- Watches for **newly created Pods** that don’t have a node assigned yet.
+- Selects the most suitable node to run a Pod based on:
+    - Resource availability (CPU, memory, etc.)
+    - Taints and tolerations
+    - Node affinity/anti-affinity
+    - Pod affinity/anti-affinity
+    - Custom policies and constraints
+- Schedules the pod and communicates this decision to the API server.
+
+---
+
+### 4. **Controllers**
+
+Controllers are control loops that **observe the cluster state** and **make changes to reach the desired state**. Examples:
+
+- **Node Controller**
+    - Detects and responds to node failures.
+    - Manages node addition/removal.
+- **Replication Controller / ReplicaSet**
+    - Ensures a specified number of pod replicas are running at all times.
+- **Deployment Controller**
+    - Handles rolling updates, rollbacks, and versioning for applications.
+- **Others**:
+    - StatefulSet Controller
+    - DaemonSet Controller
+    - Job/CronJob Controller
+    - ServiceAccount Controller
+
+All controllers interact with the API server to watch current cluster states and push changes as needed.
+
+---
+
+## ⚓ WORKER NODE
+
+Worker nodes are where the actual application containers are **deployed and run**. Each node hosts the following core components:
+
+### 1. **Kubelet**
+
+- An **agent running on every worker node**.
+- Registers the node with the cluster.
+- Watches for pod specs assigned to its node.
+- Pulls container images and starts containers via the container runtime.
+- Reports back node and pod status to the API server.
+
+**Responsibilities:**
+
+- Container lifecycle management
+- Health checking
+- Volume mounting
+- Secret/config injection
+
+---
+
+### 2. **Container Runtime**
+
+- The software that actually **runs containers**.
+- Must be **installed on every node** (both master and worker).
+- Examples:
+    - **Docker** (deprecated in newer Kubernetes versions)
+    - **containerd** (default)
+    - **CRI-O**
+    - **rkt** (deprecated)
+
+---
+
+### 3. **Kube-Proxy**
+
+- Manages **network communication** and **service discovery**.
+- Sets up network rules (IPTables or IPVS) to route traffic to the appropriate container.
+- Ensures that services (which are abstract groups of pods) can be reached from inside or outside the cluster.
+
+---
+
+## 🔁 Inter-Component Communication
+
+All components communicate via the **Kube API Server**.
+
+- The **kubelet** reports container and node status to the API server.
+- The **scheduler** and **controllers** watch the API server for changes and act accordingly.
+- **Kube-proxy** uses information from the API server to configure networking rules.
+
+---
+
+## 📡 Networking
+
+- Kubernetes provides a **flat network** model where:
+    - Every pod gets its **own IP address**.
+    - Pods can communicate **across nodes without NAT**.
+- Networking is enabled by CNI (Container Network Interface) plugins like:
+    - **Flannel**
+    - **Calico**
+    - **Weave**
+    - **Cilium**
+
+---
+
+## 📁 Summary of Key Components
+
+| Component | Location | Role |
+| --- | --- | --- |
+| etcd | Master node | Key-value store for cluster state |
+| Kube-API Server | Master node | Main access point for communication with the cluster |
+| Kube-Scheduler | Master node | Assigns Pods to nodes |
+| Controllers | Master node | Maintain cluster state via control loops |
+| Kubelet | Worker node | Executes containers and communicates with the API server |
+| Kube-Proxy | Worker node | Manages network routing and communication |
+| Container Runtime | All nodes | Runs actual containers |
+
+---
+
+## 🐳 **Docker, Containerd & Kubernetes – A Detailed Overview**
+
+---
+
+### 🔹 **1. The Early Era of Containers: The Rise of Docker**
+
+- **Docker** simplified working with containers.
+- Alternatives like **rkt** existed, but Docker’s user experience dominated.
+- Initially, **Kubernetes** was developed *specifically to orchestrate Docker*.
+- At the time, Kubernetes could only work with Docker.
+
+---
+
+### 🔹 **2. Expanding Kubernetes: Introduction of CRI**
+
+- As **Kubernetes** grew, support was needed for **multiple container runtimes** (like rkt).
+- Kubernetes introduced the **Container Runtime Interface (CRI)**:
+    - A standard interface to allow Kubernetes to work with any container runtime.
+- CRI required compliance with **OCI standards**:
+    - **OCI (Open Container Initiative)** defines:
+        - **ImageSpec** – how images should be built.
+        - **RuntimeSpec** – how runtimes should behave.
+
+---
+
+### 🔹 **3. The Problem with Docker and CRI**
+
+- **Docker** was created *before* CRI and was **not compliant** with CRI.
+- Kubernetes introduced **Dockershim**:
+    - A **temporary adapter** to let Kubernetes interact with Docker (which did not support CRI).
+- Meanwhile, **Containerd** emerged as a **CRI-compatible runtime** used internally by Docker.
+
+---
+
+### 🔹 **4. Docker’s Architecture Breakdown**
+
+- Docker is **not** just a container runtime:
+    - **Docker CLI**
+    - **Docker API**
+    - **Image build tools**
+    - Volume, Auth, Security support
+    - **runC** (the low-level runtime)
+    - **Containerd** (manages runC – and is CRI-compatible)
+
+---
+
+### 🔹 **5. Emergence of Containerd as a Standalone Runtime**
+
+- **Containerd**, once part of Docker, became a **standalone project**.
+- It is now a **graduated project under CNCF**.
+- Can be used **without Docker**, directly with Kubernetes.
+
+---
+
+### 🔹 **6. Kubernetes v1.24: Goodbye Dockershim**
+
+- In **Kubernetes v1.24**, **dockershim was removed**.
+- Docker Engine is **no longer supported directly** as a runtime.
+- All **Docker-built images still work** (thanks to OCI compliance).
+- Now, Kubernetes works **directly with CRI-compliant runtimes** like Containerd.
+
+---
+
+## 🛠️ CLI Tools Overview
+
+---
+
+### 🔸 **1. `ctr` – Containerd CLI**
+
+- Comes **bundled with Containerd**.
+- Used primarily for **debugging**.
+- Not user-friendly; supports **limited features**.
+- Example commands:
+    - `ctr images pull docker.io/library/redis:latest`
+    - `ctr run docker.io/library/redis:latest redis-container`
+
+> Not recommended for general use in production environments.
+> 
+
+---
+
+### 🔸 **2. `nerdctl` – Docker-like CLI for Containerd**
+
+- Created by the **Containerd community**.
+- Meant to **replace Docker CLI** functionality.
+- Supports most Docker commands:
+    - `nerdctl run -it nginx`
+    - `nerdctl ps`
+    - `nerdctl logs <container>`
+- **Advanced features**:
+    - Encrypted container images
+    - Lazy image pulling
+    - P2P image distribution
+    - Image signing & verification
+    - Kubernetes namespaces support
+
+> ✅ Recommended for general container operations using Containerd.
+> 
+
+---
+
+### 🔸 **3. `crictl` – CRI CLI from Kubernetes**
+
+- Created by the **Kubernetes community**.
+- Designed to interact with **CRI-compatible runtimes** (like Containerd, CRI-O, etc.).
+- Focused on **debugging/troubleshooting** from Kubernetes’ perspective.
+- Must be **installed separately**.
+- Example commands:
+    - `crictl ps` – list containers
+    - `crictl pods` – list pods (unlike Docker)
+    - `crictl exec -it <container> /bin/sh`
+    - `crictl logs <container>`
+
+> Not used to create containers, only for inspection/debugging.
+> 
+
+---
+
+## 📌 Summary Comparison
+
+| CLI Tool | Creator | Use Case | Compatible With | User-Friendly | Purpose |
+| --- | --- | --- | --- | --- | --- |
+| `ctr` | Containerd Team | Debugging only | Containerd | ❌ No | Internal debugging |
+| `nerdctl` | Containerd Team | General container usage | Containerd | ✅ Yes | Docker-like CLI |
+| `crictl` | Kubernetes Team | Debugging with CRI | Any CRI-compatible | ✅ Moderate | K8s runtime debugging |
+
+---
+
+## 🧠 Important Notes
+
+- `ctr` is **limited**, primarily for **internal or low-level operations**.
+- `nerdctl` is the **Docker CLI alternative** for Containerd and will be used **more frequently going forward**.
+- `crictl` is **not runtime-specific**; it's Kubernetes’ way to interact with the runtime via CRI.
+- **Pod-level visibility** is possible with `crictl`, not with Docker or `nerdctl`.
+
+---
+
+## 🔧 Kubernetes Endpoint Changes (Post v1.24)
+
+- Before v1.24: Dockershim endpoint: `unix:///var/run/dockershim.sock`
+- After v1.24: Replaced with `cri-dockerd.sock`
+- Users must now **explicitly set CRI endpoints** in tooling like `crictl`.
+
+PRs for reference:
+
+- [PR #869](https://github.com/kubernetes-sigs/cri-tools/pull/869)
+- [Issue #868](https://github.com/kubernetes-sigs/cri-tools/issues/868)
+
+---
+
+### ETCD
+
+### 📦 What is ETCD?
+
+- **ETCD** is a:
+    - **Distributed**
+    - **Reliable**
+    - **Key-Value Store**
+    - It is **simple**, **secure**, and **fast**.
+
+---
+
+### 📘 What is a Key-Value Store?
+
+### 🔁 Compared to Traditional Databases:
+
+- **Traditional DBs** (like SQL or relational databases):
+    - Store data in **tables** with **rows** and **columns**.
+    - Example: A table with name, age, and now a new column "salary".
+        - Not all rows need "salary" → leads to **empty/null cells**.
+    - Adding new fields affects the **entire table**.
+
+### 🗃️ Key-Value Stores:
+
+- Store data in **documents or files** per entity.
+- Each individual gets a **document** with their relevant data.
+- Changes in one document **do not affect** others.
+- Format can be **flexible** – such as **JSON** or **YAML**.
+- Suited for dynamic, flexible data storage.
+
+---
+
+### ⚙️ How to Get Started with ETCD
+
+1. **Download the binary** from GitHub releases.
+2. **Extract** the archive.
+3. **Run the ETCD executable**:
+    - By default, it starts a service listening on **port 2379**.
+    - Clients can now **connect**, **store**, and **retrieve** data.
+
+---
+
+### 🔧 Using the `etcdctl` Client Tool
+
+- `etcdctl` is a **command-line tool** to interact with the ETCD server.
+- Basic usage (with **v2.0 API**):
+    - **Set a key**:
+        
+        ```bash
+        ./etcdctl set key1 value1
+        
+        ```
+        
+    - **Get a key**:
+        
+        ```bash
+        ./etcdctl get key1
+        
+        ```
+        
+- Run `./etcdctl` with no arguments to see available commands.
+
+---
+
+### 🕰️ ETCD Version History & Evolution
+
+| Version | Date | Key Updates |
+| --- | --- | --- |
+| v0.1 | Aug 2013 | Initial release |
+| v2.0 | Feb 2015 | Official stable release; RAFT algorithm redesigned; >10,000 writes/sec |
+| v3.0 | Jan 2017 | Major performance improvements; new APIs introduced |
+| Nov 2018 |  | ETCD project **incubated by CNCF** (Cloud Native Computing Foundation) |
+
+### ⚠️ Important Note:
+
+- **v2.0 vs v3.0**:
+    - API and command structure **changed significantly**.
+    - Some commands in v2 no longer apply in v3.
+
+---
+
+### 🔎 Checking Your `etcdctl` Version
+
+Run:
+
+```bash
+etcdctl version
+
+```
+
+- **Example Output**:
+    - `etcdctl version: 3.x.x`
+    - `API version: 2`
+
+This tells you:
+
+- The tool’s **binary version**
+- The **API version** it is currently configured to work with (2 or 3)
+
+---
+
+### 🔁 Switching Between API Versions
+
+To use **v3.0 API** commands:
+
+- Temporarily (per command):
+    
+    ```bash
+    ETCDCTL_API=3 ./etcdctl put key1 value1
+    
+    ```
+    
+- Permanently (for the session):
+    
+    ```bash
+    export ETCDCTL_API=3
+    
+    ```
+    
+
+### 🧠 v2 vs v3 Command Syntax
+
+| Action | v2 Command | v3 Command |
+| --- | --- | --- |
+| Set key | `./etcdctl set key value` | `./etcdctl put key value` |
+| Get key | `./etcdctl get key` | `./etcdctl get key` |
+| Version | `./etcdctl --version` | `./etcdctl version` |
+- `version` is now a **command** in v3, not an option.
+
+---
+
+### 🧭 Summary
+
+- **ETCD** is a powerful key-value store used in distributed systems.
+- It differs from relational DBs by offering a flexible, document-style model.
+- `etcdctl` is the main tool used to interact with ETCD.
+- Know your **ETCDCTL API version** to use the correct command syntax.
+- Set `ETCDCTL_API=3` to use the modern v3 command structure.
+- ETCD has evolved significantly from v2.0 to v3.0 — changes affect both performance and how it is used.
+
+---
+
+### 🔑 **What is etcd’s Role in Kubernetes?**
+
+- `etcd` is the **primary datastore** used by Kubernetes to store **all cluster-related data**.
+- It stores key information such as:
+    - Nodes
+    - Pods
+    - ConfigMaps
+    - Secrets
+    - ServiceAccounts
+    - Roles and RoleBindings
+    - And much more
+
+### 🧠 When You Use `kubectl get ...`
+
+- Every time you use a `kubectl get` command (e.g., `kubectl get pods`), you're **retrieving data stored in `etcd`**.
+- Any **change to the cluster** (e.g., adding nodes, creating pods, updating deployments):
+    - Must first be updated in `etcd`.
+    - **Only after the change is recorded in `etcd`, is it considered complete.**
+
+---
+
+### 🏗️ **etcd Deployment Types in Kubernetes**
+
+There are **two common ways** to deploy Kubernetes, and each handles `etcd` differently:
+
+### 1. **Kubernetes Deployed from Scratch (Manual Setup)**
+
+- You download and install `etcd` binaries **yourself**.
+- Configure `etcd` as a **system service** on the **master node**.
+- You need to set several important options when configuring the service:
+    - ⚠️ **Certificate Options** (TLS for secure communication)
+        - These will be covered in detail in a later TLS-focused section.
+    - ⚙️ **Cluster Configuration Options**
+        - Covered later in the High Availability (HA) section.
+    - 🌐 **Advertised Client URL**
+        - This tells etcd **where it listens for client requests**.
+        - Usually: `https://<master-node-IP>:2379`
+        - The **Kubernetes API Server** uses this URL to communicate with `etcd`.
+
+### 2. **Kubernetes Deployed Using `kubeadm`**
+
+- `kubeadm` automatically:
+    - Deploys `etcd` as a **Pod** in the `kube-system` namespace.
+- To interact with `etcd`:
+    - Use the **etcdctl utility inside the etcd Pod**.
+
+---
+
+### 📂 **etcd Directory Structure in Kubernetes**
+
+- Kubernetes stores its data in a **well-organized directory structure** inside etcd.
+- The **root directory**: `/registry`
+    - Under `/registry`, you'll find:
+        - `minions` → nodes
+        - `pods` → pod definitions
+        - `replicasets`, `deployments`, etc.
+- To **list all stored keys**, run:
+    
+    ```bash
+    etcdctl get "" --prefix --keys-only
+    
+    ```
+    
+
+---
+
+### 🔁 **High Availability (HA) and etcd**
+
+In HA Kubernetes Clusters:
+
+- You have **multiple master nodes**.
+- Therefore, multiple **etcd instances**, one per master node.
+- All these etcd instances form an **etcd cluster**.
+
+To configure properly:
+
+- Set the `initial-cluster` option in the etcd service file:
+    - This tells each etcd node **about all the other nodes** in the etcd cluster.
+    - Ensures **peer discovery and communication**.
+
+> The details of HA setup will be covered more thoroughly in a future section, but it's important to understand that etcd must be clustered appropriately in multi-master setups.
+> 
+
+---
+
+### ✅ Summary
+
+| Concept | Key Details |
+| --- | --- |
+| etcd | Primary key-value data store used by Kubernetes |
+| Stores | Cluster state: nodes, pods, configs, secrets, etc. |
+| Deployed From Scratch | etcd is manually installed and configured as a service |
+| Deployed with `kubeadm` | etcd runs as a Pod in the `kube-system` namespace |
+| Default Port | 2379 |
+| etcdctl | CLI tool to interact with etcd |
+| HA Clusters | etcd runs on multiple masters and must be clustered using `initial-cluster` |
+
+---
+
+## 🧰 **Understanding `etcdctl`: The CLI for etcd**
+
+`etcdctl` is the **command-line utility** used to **interact with the etcd server**.
+
+You can use it to view, add, update, or delete data in etcd, perform health checks, take snapshots, and more.
+
+---
+
+## 🔄 **API Versions in `etcdctl`**
+
+`etcdctl` supports **two API versions**:
+
+| API Version | Default? | Notes |
+| --- | --- | --- |
+| **Version 2** | ✅ Yes (if not specified) | Older commands |
+| **Version 3** | ❌ Requires environment variable | Modern, production-ready version |
+
+> 🛑 Important: The command syntax varies between API v2 and v3 — they are not compatible.
+> 
+
+---
+
+## 🧾 **Sample Commands per API Version**
+
+### ✅ Version 2 Commands (Default if not explicitly set)
+
+```bash
+etcdctl backup
+etcdctl cluster-health
+etcdctl mk /path value
+etcdctl mkdir /directory
+etcdctl set /key value
+
+```
+
+### ✅ Version 3 Commands (Must set `ETCDCTL_API=3`)
+
+```bash
+etcdctl snapshot save snapshot.db
+etcdctl endpoint health
+etcdctl get /key
+etcdctl put /key value
+
+```
+
+---
+
+## 🧪 **Switching to API Version 3**
+
+To use **API version 3**, you must explicitly set the environment variable:
+
+```bash
+export ETCDCTL_API=3
+
+```
+
+> Without setting this, the default is v2 — and v3 commands will not work.
+> 
+
+---
+
+## 🔐 **Authentication with TLS Certificates**
+
+When connecting securely to an etcd server (like in Kubernetes), `etcdctl` needs **certificate files** for TLS authentication:
+
+| Certificate Type | Flag | Path |
+| --- | --- | --- |
+| CA Certificate | `--cacert` | `/etc/kubernetes/pki/etcd/ca.crt` |
+| Server Certificate | `--cert` | `/etc/kubernetes/pki/etcd/server.crt` |
+| Server Private Key | `--key` | `/etc/kubernetes/pki/etcd/server.key` |
+
+These are needed because etcd uses **mutual TLS** for secure communication.
+
+> ✅ Don't worry if this seems complex — the Security/TLS section of the course will explain certificates in detail.
+> 
+
+---
+
+## 🔧 **Full Command Example**
+
+Here's how you can query etcd data from inside the etcd pod on a kubeadm-based Kubernetes setup:
+
+```bash
+kubectl exec etcd-master -n kube-system -- \
+sh -c "ETCDCTL_API=3 etcdctl get / \
+--prefix --keys-only --limit=10 \
+--cacert /etc/kubernetes/pki/etcd/ca.crt \
+--cert /etc/kubernetes/pki/etcd/server.crt \
+--key /etc/kubernetes/pki/etcd/server.key"
+
+```
+
+### 🔍 What This Command Does:
+
+- `kubectl exec ...`: Runs the command inside the etcd pod (`etcd-master`) in the `kube-system` namespace.
+- `ETCDCTL_API=3`: Ensures API v3 commands are used.
+- `etcdctl get /`: Gets all keys under root.
+- `-prefix`: Enables recursive key listing.
+- `-keys-only`: Lists only the key names (not values).
+- `-limit=10`: Limits output to 10 keys.
+- Certificate flags: Authenticate securely to the etcd server.
+
+---
+
+## ✅ Summary
+
+| Feature | Detail |
+| --- | --- |
+| CLI Tool | `etcdctl` |
+| Versions | API v2 (default), API v3 (modern) |
+| Set API Version | `export ETCDCTL_API=3` |
+| Auth Required | Yes (certs needed in secured clusters) |
+| Common Use | Explore etcd data, snapshot, health check, etc. |
+
+---
+
+## 📡 **Kubernetes API Server (kube-apiserver)**
+
+The **`kube-apiserver`** is the **central control plane component** in a Kubernetes cluster. It acts as the **front-end** for all management operations and communication between users, components, and the cluster state.
+
+---
+
+### 🔄 **Role in Cluster Communication**
+
+- It is the **main entry point** into the cluster for all interactions.
+- Every command executed via `kubectl` is sent to the **kube-apiserver**.
+- It handles:
+    - **Authentication**
+    - **Validation**
+    - **Data persistence (via etcd)**
+    - **Cluster state updates**
+    - **Serving and exposing the Kubernetes API**
+
+---
+
+## ⚙️ **How it Works – Example: Creating a Pod**
+
+1. **User issues `kubectl apply -f pod.yaml`**
+2. `kubectl` sends a request to the **kube-apiserver**
+3. The **API server authenticates and validates** the request
+4. The **pod object** is created but is **not scheduled** yet
+5. The object is **persisted into `etcd`**
+6. The **kube-scheduler** sees a pod without a node and assigns a node
+7. The scheduler sends node assignment info back to **kube-apiserver**
+8. The API server **updates etcd**
+9. **Kubelet** on the assigned node pulls the pod definition from the API server
+10. Kubelet instructs the **container runtime** to start containers
+11. Pod is launched → **kubelet updates status**
+12. **API server updates etcd again** with pod status
+
+🔁 This **cyclic flow of communication** always **goes through the API server**.
+
+---
+
+## 🔐 **Only API Server Interacts Directly with etcd**
+
+- `etcd` is the **central data store** of Kubernetes.
+- **Only kube-apiserver** can communicate directly with `etcd`.
+- All other components (scheduler, controller-manager, kubelet) must go through the **API server** to read/write cluster state.
+
+---
+
+## 🧪 **Accessing the Kubernetes API Directly**
+
+- You don’t always have to use `kubectl` — you can interact with the **API directly via HTTP REST calls**.
+- Example: Send a `POST` request to create a pod using the API endpoint.
+- This is often done by other components and operators inside the cluster.
+
+---
+
+## 🔧 **How to Install & Configure kube-apiserver**
+
+### ✅ If you used `kubeadm`:
+
+- The API server runs as a **static pod**.
+- Pod manifest located at:
+    
+    ```
+    /etc/kubernetes/manifests/kube-apiserver.yaml
+    
+    ```
+    
+
+### ✅ If you manually configured:
+
+- It's a systemd service.
+- Check the service file:
+    
+    ```
+    /etc/systemd/system/kube-apiserver.service
+    
+    ```
+    
+
+### ✅ Inspect running process:
+
+- You can inspect current runtime parameters using:
+    
+    ```bash
+    ps -ef | grep kube-apiserver
+    
+    ```
+    
+
+---
+
+## 🔍 **Common kube-apiserver Flags**
+
+> 🛑 You don’t need to remember all, but here are some key ones:
+> 
+
+| Flag | Description |
+| --- | --- |
+| `--etcd-servers` | Location of the etcd cluster |
+| `--client-ca-file` | CA certificate to authenticate clients |
+| `--tls-cert-file` / `--tls-private-key-file` | For securing the API server itself |
+| `--service-account-key-file` | Verifies service account tokens |
+| `--authorization-mode` | Enables modes like RBAC |
+| `--kubelet-client-certificate` / `--kubelet-client-key` | Used to talk securely to kubelets |
+| `--audit-log-path` | Enable audit logs for tracking API requests |
+
+> 🔐 SSL/TLS and cert-related options are discussed in the TLS and Security section.
+> 
+
+---
+
+## 🏗️ **Why So Many Options?**
+
+- Kubernetes is a **distributed system** — each component must know how to securely talk to others.
+- Complex auth/authz mechanisms require certs, keys, modes, and paths.
+- The API server is the **central nervous system** — hence the most complex to configure.
+
+---
+
+## ✅ **Summary**
+
+| Feature | Description |
+| --- | --- |
+| Main Role | Gateway for all cluster operations |
+| Interacts with etcd? | ✅ Yes (directly) |
+| Other components? | Interact with etcd **via** the API server |
+| How to access it? | Via `kubectl`, REST API, or directly |
+| Where is it configured? | Manifest (kubeadm) or systemd (manual) |
+| Needs certificates? | ✅ Yes (for secure communication) |
+
+---
+
+### **Kube Controller Manager**
+
+**What is the Kube Controller Manager?**
+
+- It's a core component of the Kubernetes control plane.
+- It runs multiple controllers as a **single binary process**.
+- Think of it like multiple departments in an office, each handling a specific job to keep the Kubernetes cluster healthy.
+
+---
+
+### 🧠 **Core Concepts:**
+
+### ✅ **What Is a Controller?**
+
+- A **controller** is a loop that watches the state of your cluster and **makes changes** to move the current state toward the desired state.
+- Each controller is responsible for a **specific function**, such as:
+    - Node Controller
+    - Replication Controller
+    - Deployment Controller
+    - Service Controller, etc.
+
+---
+
+### ⚙️ **Examples of Controllers:**
+
+### 🖥️ Node Controller
+
+- Monitors the health of worker nodes.
+- Checks for heartbeats every **5 seconds**.
+- If no heartbeat in **40 seconds**, marks the node as unreachable.
+- If the node doesn’t recover within **5 minutes**, it removes the Pods and reschedules them on healthy nodes (if managed by a ReplicaSet).
+
+### 🌀 Replication Controller
+
+- Ensures that a specific number of pod replicas are always running.
+- If one pod fails, it **spins up another** to maintain the desired count.
+
+---
+
+### 🛠️ **How It Works in the Cluster:**
+
+- Runs as a **Pod** in the `kube-system` namespace (if installed using `kubeadm`).
+- Talks to the **kube-apiserver** to get the current state and update changes.
+
+---
+
+### 🔍 **Viewing and Configuring:**
+
+- In a `kubeadm` cluster: check `/etc/kubernetes/manifests/kube-controller-manager.yaml`.
+- In a manual setup: check the systemd service file at `/etc/systemd/system/kube-controller-manager.service`.
+- Use `ps aux | grep kube-controller-manager` to view runtime options.
+
+---
+
+### ⚙️ **Important Options:**
+
+- `-controllers`: specify which controllers to enable/disable (all enabled by default).
+- Timing-related configs:
+    - `-node-monitor-period`
+    - `-node-monitor-grace-period`
+    - `-pod-eviction-timeout`
+
+---
+
+### 🔐 **Note on Security:**
+
+- Like other components, the controller manager uses **certificates** to securely communicate with the kube-apiserver.
+
+---
+
+### **Kube-Scheduler**
+
+---
+
+### 🚢 **What Is the Kube-Scheduler?**
+
+- It's a **core component** of the Kubernetes control plane.
+- It is responsible for **deciding** *which Pod goes to which Node* — **it does not actually place the Pod** on the Node.
+- **Kubelet** is the component that runs on each Node and actually creates the Pod.
+
+> Think of the scheduler as the planner, and the kubelet as the executor.
+> 
+
+---
+
+### 🧠 **Why Is Scheduling Important?**
+
+When you have:
+
+- **Many Pods (containers)** to run
+- **Many Nodes (ships)** to host them
+    
+    → You need to **intelligently match** them based on resource availability and other rules.
+    
+
+Examples:
+
+- A Node might be too small (not enough CPU/RAM).
+- A Pod may need to run only on certain Nodes.
+- Some Nodes may be reserved for specific applications.
+
+---
+
+### ⚙️ **How Scheduling Works (Two-Phase Process)**
+
+### **1. Filtering Phase**
+
+- **Goal:** Eliminate nodes that don’t meet the basic requirements of the pod.
+- Filters out nodes lacking:
+    - Sufficient CPU or Memory
+    - Required hardware
+    - Necessary labels or taints/tolerations, etc.
+
+➡️ Example: If a pod needs 4 CPUs and a Node only has 2, it gets **filtered out**.
+
+### **2. Scoring Phase (Ranking)**
+
+- Remaining eligible nodes are scored on a **scale from 0 to 10**.
+- The scheduler uses **priority functions** (now called *scoring functions*) to rank the Nodes.
+- Example: If one Node will have **6 CPUs free** after placing the pod, and another will only have 2, the first gets a higher score.
+
+The **highest-scoring Node** is selected to run the Pod.
+
+---
+
+### 🧰 **Kube-Scheduler Configuration**
+
+### 🏗️ Installation:
+
+- Download the binary from the Kubernetes release page.
+- Extract and run it as a system service or as a Pod.
+
+### 🔍 Viewing Configuration:
+
+- In `kubeadm`based clusters:
+    - It's deployed as a **Pod** in the `kube-system` namespace.
+    - Pod definition: `/etc/kubernetes/manifests/kube-scheduler.yaml`
+
+### 🔎 Runtime Inspection:
+
+- Use:
+    
+    ```bash
+    ps aux | grep kube-scheduler
+    
+    ```
+    
+    to see the running process and its flags/options.
+    
+
+---
+
+### 🔄 **Custom Scheduling**
+
+- Kubernetes allows you to write your **own scheduler** if you want to apply completely custom logic.
+- The default scheduler is extensible and supports custom plugins and configuration.
+
+---
+
+### 🧩 **Related Concepts to Explore Later**
+
+The full scheduling section will dive deeper into:
+
+- **Resource Requests and Limits**
+- **Taints and Tolerations**
+- **Node Selectors**
+- **Affinity and Anti-affinity Rules**
+- **Pod Topology Constraints**
+
+These control *where* and *how* Pods are scheduled beyond just raw resource matching.
+
+---
+
+### **Kubelet**
+
+---
+
+### 🚢 **What Is the Kubelet?**
+
+- The **kubelet** is the **captain of the ship** (i.e., the **Node**) in the Kubernetes ecosystem.
+- It runs on every **worker node** and is responsible for:
+    - **Registering** the node with the cluster
+    - **Managing** Pods on the node
+    - **Interfacing** with the container runtime (like Docker or containerd)
+    - **Reporting** node and pod status to the **Kube API Server**
+
+---
+
+### 📦 **Kubelet Responsibilities**
+
+1. **Node Registration**
+    - The kubelet joins the worker node to the Kubernetes cluster by registering it with the control plane (API Server).
+2. **Pod Management**
+    - When the scheduler assigns a Pod to a Node, the kubelet:
+        - Receives this instruction via the API server.
+        - Requests the **container runtime engine** to:
+            - Pull the required container image.
+            - Start the container (i.e., create the Pod).
+3. **Health Monitoring**
+    - The kubelet continuously monitors:
+        - The status of Pods and containers on the Node.
+        - The health of the Node itself.
+    - It **reports** this information back to the **Kubernetes control plane** (via the API server) at regular intervals.
+
+> In short, if the scheduler plans, the kubelet executes and reports back.
+> 
+
+---
+
+### ⚙️ **Installing the Kubelet**
+
+### 🛠️ Using kubeadm:
+
+- Unlike some other components (like kube-scheduler or kube-controller-manager), **kubeadm does not install the kubelet** for you.
+- You **must manually install** it on each **worker node**.
+
+### 🧾 Steps:
+
+1. **Download** the kubelet binary.
+2. **Extract and install** it.
+3. **Run it as a service** (usually managed via `systemd`).
+
+### 🔍 Inspecting Kubelet Process:
+
+You can check the running kubelet process and its flags using:
+
+```bash
+ps aux | grep kubelet
+
+```
+
+This shows all the current configuration flags in effect (e.g., path to config files, certificates, etc.).
+
+---
+
+### 🔐 **TLS Bootstrap and Configuration (Coming Later)**
+
+Later in the course, you'll explore:
+
+- How to **configure** the kubelet in more detail.
+- How to **generate certificates** needed for secure communication.
+- How to perform **TLS Bootstrap**, which allows the kubelet to securely join the cluster and obtain certificates automatically.
+
+---
+
+### ⛵ Analogy Recap:
+
+- **Ship** = Kubernetes Node
+- **Captain (Kubelet)** = In charge of executing orders (creating/managing containers)
+- **Control Ship (Master)** = Gives orders via Scheduler & API Server
+- **Containers** = Pods running on board
+
+---
+
+## **kube-proxy in Kubernetes**
+
+---
+
+### 🌐 **Cluster Networking: The Big Picture**
+
+- In Kubernetes, **every Pod can communicate with every other Pod**, no matter which node it’s on.
+- This is made possible by the **pod network**, a **virtual network** that spans across **all nodes** in the cluster.
+- To deploy this network, Kubernetes relies on **network plugins** (like Calico, Flannel, Weave, etc.).
+
+---
+
+### 📦 **Service-Based Communication**
+
+- Each Pod has an **IP address**, but **Pod IPs are ephemeral** (i.e., they can change over time, especially after restarts).
+- So, **direct communication using Pod IPs is unreliable**.
+
+### ✅ Solution: Use **Services**
+
+- A **Service** provides:
+    - A **stable IP address**
+    - A **DNS name** (e.g., `db-service`)
+    - **Automatic load-balancing** to backend Pods
+
+### 🎯 Example:
+
+- Web app Pod on Node 1 wants to talk to DB Pod on Node 2.
+- Instead of using the DB Pod’s IP (which may change), the web app talks to `db-service`.
+
+---
+
+### ❓ But What Is a **Service**, Really?
+
+- A **Service is a virtual object**, not a Pod or container.
+- It doesn't have:
+    - A network interface
+    - A running process
+    - A direct presence on the network
+- Yet, it has an **IP address** that’s accessible **from all nodes** in the cluster.
+
+---
+
+### 🔧 **So How Does a Service Work Then?**
+
+This is where **`kube-proxy`** comes in.
+
+---
+
+## 🧰 **What Is kube-proxy?**
+
+- `kube-proxy` is a **networking component** that:
+    - Runs as a **process on every node**
+    - Watches for newly created or updated **Services**
+    - **Sets up networking rules** so traffic sent to a Service’s IP is redirected to the appropriate backend Pods
+
+---
+
+### 🔄 How kube-proxy Works
+
+- It uses **iptables** (or **ipvs**) rules to manage traffic routing.
+
+### Example:
+
+- A Service gets the cluster IP `10.96.0.12`
+- A backend Pod (e.g., DB Pod) has IP `10.32.0.15`
+- kube-proxy sets an **iptables rule** on **every node** that forwards traffic:
+    
+    ```
+    If destination == 10.96.0.12
+    → redirect to 10.32.0.15
+    
+    ```
+    
+- That way, **any Pod on any node** that tries to access the Service is seamlessly routed to the correct Pod behind the scenes.
+
+---
+
+### 📦 **Deployment of kube-proxy**
+
+- If you're using **`kubeadm`**, kube-proxy is automatically deployed.
+- It is deployed as a **DaemonSet**:
+    - A type of workload that ensures **one pod of kube-proxy runs on each node** in the cluster.
+- The DaemonSet runs kube-proxy with the necessary configuration for each node.
+
+---
+
+### 📥 **Manual Installation (if not using kubeadm)**
+
+1. **Download** kube-proxy binary from the Kubernetes release page.
+2. **Extract** it.
+3. **Run it as a system service** or manually using the configuration file.
+
+---
+
+### 📘 Recap and What’s Ahead
+
+- kube-proxy is essential for making Kubernetes **Services work**.
+- It **routes traffic** between Pods and Services even though Services are **virtual constructs**.
+- Later in the course, you will explore:
+    - In-depth networking
+    - DNS resolution
+    - NodePorts, LoadBalancers
+    - DaemonSets and more
+
+---
+
+## 🧱 **Kubernetes Pods - Foundation of Deployment**
+
+### What are Pods?
+
+- A **Pod** is the **smallest deployable unit in Kubernetes**.
+- It usually contains **one container**, but can have **multiple containers** (e.g., helper/sidecar containers).
+- All containers in a pod:
+    - Share the **same network namespace** (can communicate via `localhost`)
+    - Can share the **same storage volumes**
+    - **Start and stop together**
+
+### Scaling with Pods
+
+- To **scale an application**, you don’t add containers to the same pod.
+    - Instead, you **create more pods**, each with its own container.
+- These pods can be deployed on **different nodes** in a cluster.
+- This is better than manually running containers on Docker, as Kubernetes **manages lifecycle, networking, and volumes** for you.
+
+### Creating a Pod
+
+- Use `kubectl run` with the `-image` flag:
+    
+    ```
+    kubectl run nginx --image=nginx
+    
+    ```
+    
+    This:
+    
+    - Pulls the Docker image (e.g., from Docker Hub)
+    - Wraps it in a Pod
+    - Runs it in the Kubernetes cluster
+- View pods with:
+    
+    ```
+    kubectl get pods
+    
+    ```
+    
+
+---
+
+## 🌐 **Kube-Proxy - Enabling Networking for Services**
+
+### How do Pods communicate?
+
+- Every pod in a Kubernetes cluster can reach every other pod via a **pod network** (an internal virtual network that spans all nodes).
+- However, **pod IPs are ephemeral** — they may change if the pod restarts.
+
+### Enter Services
+
+- To avoid relying on changing IPs, we use a **Service**, which gives a **stable name and virtual IP** to a group of pods.
+- Example: A web app can access a database using `http://db-service` instead of the DB pod's IP.
+
+### But how does traffic reach the right pod?
+
+- Services are **not actual containers** — they don’t have their own process or network interface.
+- Instead, Kubernetes uses **kube-proxy** to make services work.
+
+### What is kube-proxy?
+
+- A component that runs on **every node** in the cluster (as a **DaemonSet**).
+- Watches for newly created services and:
+    - Sets up **iptables** or **IPVS** rules
+    - Routes traffic from the **service IP** to the appropriate **backend pods**
+
+### Example
+
+If a service has IP `10.96.0.12`, and the backend pod has IP `10.32.0.15`, kube-proxy ensures that:
+
+- Requests to `10.96.0.12` get forwarded to `10.32.0.15`.
+
+---
+
+## 🧠 Summary
+
+| Component | Role |
+| --- | --- |
+| **Pod** | Smallest unit of deployment; usually wraps a container |
+| **Service** | Provides stable DNS/IP to access a pod or group of pods |
+| **kube-proxy** | Ensures traffic to a service gets routed to correct pods |
+| **kubectl run** | Command to create a pod from a Docker image |
+| **DaemonSet** | Ensures kube-proxy (and other components) run on all nodes |
+
+---
+
+### **Creating a Pod using a YAML Configuration File in Kubernetes**
+
+### 📄 **Purpose of YAML in Kubernetes**
+
+YAML files are used to define **Kubernetes objects** like:
+
+- Pods
+- ReplicaSets
+- Deployments
+- Services, etc.
+
+---
+
+### 🔑 **Four Required Top-Level Fields in a Kubernetes YAML File**
+
+Every Kubernetes object definition must include:
+
+1. **`apiVersion`**
+    - Specifies the version of the Kubernetes API.
+    - Example: `v1` for pods.
+    - Other versions: `apps/v1`, `extensions/v1beta1`.
+2. **`kind`**
+    - Specifies the type of object to create.
+    - Example: `Pod`, `Deployment`, `Service`, etc.
+3. **`metadata`**
+    - Describes metadata about the object.
+    - Includes fields like:
+        - `name`: Unique name for the object.
+        - `labels`: Key-value pairs to categorize the object.
+    - Note: YAML indentation matters—`name` and `labels` must be correctly nested.
+4. **`spec`**
+    - Describes the specification of the object.
+    - For a Pod:
+        - `containers`: A list of containers inside the pod.
+        - Each item in the list includes:
+            - `name`: Name of the container.
+            - `image`: Docker image to use (e.g., `nginx`).
+
+---
+
+### 🧪 **Example Pod YAML Snippet**
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app-pod
+  labels:
+    app: my-app
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx
+
+```
+
+---
+
+### ⚙️ **How to Create and View the Pod**
+
+- **Create the pod**:
+    
+    ```bash
+    kubectl create -f pod-definition.yaml
+    
+    ```
+    
+- **List pods**:
+    
+    ```bash
+    kubectl get pods
+    
+    ```
+    
+- **Detailed pod info**:
+    
+    ```bash
+    kubectl describe pod <pod-name>
+    
+    ```
+    
+
+---
+
+### Demo - Pods with YAML
+
+To create a **Kubernetes Pod** using a **YAML definition file** instead of the `kubectl run` command.
+
+---
+
+### 🛠️ **Tools Suggested**
+
+- **Linux** users: `vim` or `vi` editors
+- **Windows** users: `Notepad++` instead of plain Notepad (for YAML syntax support)
+
+---
+
+### 📄 **YAML File Structure**
+
+The pod definition file (`pod.yaml`) consists of **4 mandatory root-level fields**:
+
+1. **`apiVersion:`**
+    - For pods: `v1`
+2. **`kind:`**
+    - Object type: `Pod` (note the capital "P", it's case-sensitive)
+3. **`metadata:`**
+    - Dictionary that contains:
+        - `name:` → Name of the pod (e.g., `nginx`)
+        - `labels:` → Dictionary of labels like:
+            
+            ```yaml
+            app: nginx
+            tier: frontend
+            
+            ```
+            
+4. **`spec:`**
+    - Dictionary containing the pod specification
+    - Key field: `containers` → a **list** (array) of container definitions
+
+---
+
+### 📋 **Example YAML File (`pod.yaml`)**
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+    tier: frontend
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+
+```
+
+> 🔸 Indentation Rules:
+> 
+- **2 spaces** (not tabs!) are standard
+- Children must be indented more than parents
+- Sibling fields should be aligned vertically
+
+---
+
+### 🚀 **Creating the Pod**
+
+Use either:
+
+```bash
+kubectl create -f pod.yaml
+# or
+kubectl apply -f pod.yaml
+
+```
+
+---
+
+### 📊 **Verify the Pod**
+
+1. **Check status**:
+    
+    ```bash
+    kubectl get pods
+    
+    ```
+    
+2. **Inspect in detail**:
+    
+    ```bash
+    kubectl describe pod nginx
+    
+    ```
+    
+
+---
+
+### 🧠 **Tips**
+
+- `containers:` is a **list**, so prefix entries with
+- You can add multiple containers in the list (e.g., `nginx`, `busybox`, etc.)
+- Ensure proper formatting before running the `kubectl` commands
+
+---
+
+# Kubernetes Pods Lab Session
+
+---
+
+### **Q1: Creating a New Pod with Nginx**
+
+**Question:** Create a new pod with the nginx image.
+
+**What I did:**
+
+I ran the following command to create the pod:
+
+```bash
+kubectl run nginx-pod --image=nginx
+
+```
+
+This created a pod named `nginx-pod` using the default nginx image.
+
+---
+
+### **Q2: Identifying Pod Images**
+
+**Question:** What is the image used to create the new pods?
+
+**What I did:**
+
+I used the command:
+
+```bash
+kubectl describe pod newpods-4x7qf
+
+```
+
+This showed the container specs, including the image used in the pod.
+
+---
+
+### **Q3: Container Count in Webapp Pod**
+
+**Question:** How many containers are part of the pod webapp?
+
+**What I did:**
+
+I checked the pod list using:
+
+```bash
+kubectl get pods
+
+```
+
+Saw that the `webapp` pod had a READY status of `1/2`, indicating it had 2 containers in total.
+
+---
+
+### **Q4: Images in Webapp Pod**
+
+**Question:** What images are used in the new webapp pod?
+
+**What I did:**
+
+I described the pod:
+
+```bash
+kubectl describe pod webapp
+
+```
+
+Found that it had two containers — one using the `nginx` image, and another trying to use `agentx`, which was failing.
+
+---
+
+### **Q5: Container State in Webapp Pod**
+
+**Question:** What is the state of the container agentx in the pod webapp?
+
+**What I did:**
+
+I again used:
+
+```bash
+kubectl describe pod webapp
+
+```
+
+Found that the `agentx` container was in the `ImagePullBackOff` state.
+
+---
+
+### **Q6: Error Analysis for Agentx Container**
+
+**Question:** Why is the container agentx in pod webapp in error?
+
+**What I did:**
+
+Checked the "Events" section in:
+
+```bash
+kubectl describe pod webapp
+
+```
+
+Saw that the image `agentx` couldn’t be pulled due to either non-existence or access denial on Docker Hub.
+
+---
+
+### **Q7: READY Column Explanation**
+
+**Question:** What does the READY column in the output of `kubectl get pods` indicate?
+
+**What I did:**
+
+Looked at the output of:
+
+```bash
+kubectl get pods
+
+```
+
+Understood that READY shows the number of containers ready out of total containers in each pod, like `1/2` for the `webapp` pod.
+
+---
+
+### **Q8: Deleting Webapp Pod**
+
+**Question:** How to delete the webapp Pod?
+
+**What I did:**
+
+Ran:
+
+```bash
+kubectl delete pod webapp
+
+```
+
+Then monitored its deletion using:
+
+```bash
+kubectl get pod webapp --watch
+
+```
+
+---
+
+### **Q9: Creating Redis Pod with YAML**
+
+**Question:** Create a new pod named redis using image `redis123` via YAML.
+
+**What I did:**
+
+Created a YAML file named `redis-pod.yaml` with this content:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis
+spec:
+  containers:
+  - name: redis
+    image: redis123
+
+```
+
+Then I applied it:
+
+```bash
+kubectl apply -f redis-pod.yaml
+
+```
+
+Checked its status:
+
+```bash
+kubectl get pod redis
+
+```
+
+And viewed details with:
+
+```bash
+kubectl describe pod redis
+
+```
+
+Saw that it went into `ImagePullBackOff` because the image `redis123` doesn't exist.
+
+---
