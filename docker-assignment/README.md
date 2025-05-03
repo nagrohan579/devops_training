@@ -22,7 +22,8 @@ All services are defined in [`docker-compose.yml`](./docker-compose.yml) and com
 ## How It Works
 
 - When you start the app with Docker Compose, three containers are created: two for the frontend (User A and User B) and one for the backend.
-- Each frontend connects to the backend WebSocket server using the service name `backend` (not `localhost`), e.g., `ws://backend:5000/ws/A` or `ws://backend:5000/ws/B`.
+- The frontend connects to the backend WebSocket server using `window.location.hostname` (not hardcoded `backend`), e.g., `ws://localhost:5000/ws/A` or `ws://localhost:5001/ws/B` when accessed through the browser.
+- Inside the Docker network, containers can still reference each other using service names, but the browser uses the hostname through which the application is accessed.
 - Messages sent from one user are routed by the backend to the intended recipient in real time.
 
 ## Setup & Running Instructions
@@ -63,7 +64,7 @@ docker-assignment/
 
 ## Issues Faced
 
-- **Message Delivery Issue**: Initially, messages were only being delivered from User B to User A, but not the other way around. This was because the frontend was trying to access port 5000 on `localhost` inside the container, which does not work since the backend is running as a separate container. The fix was to set the environment variable `REACT_APP_BACKEND_HOST=backend` in the frontend containers, so they connect to the backend using the Docker service name, ensuring proper communication between containers.
+- **WebSocket Connection Issue**: Initially, browser clients couldn't connect to the WebSocket server. The issue was that the React frontend was trying to connect to `ws://backend:5000/ws/A` or `ws://backend:5000/ws/B`, but "backend" is a Docker service name that's only resolvable within the Docker network, not from the browser. The fix was to modify the WebSocket connection code in App.js to use `window.location.hostname` instead of hardcoding the backend service name. This ensures that when the application is accessed through localhost:3000 or localhost:3001, the WebSocket connections properly use the same hostname that the application is being accessed through (e.g., `ws://localhost:5000/ws/A`), making the connections work in the browser environment while still maintaining the containerized architecture.
 
 ## How to Use
 

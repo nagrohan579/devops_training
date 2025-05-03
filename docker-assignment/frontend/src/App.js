@@ -19,8 +19,10 @@ function App() {
     // Default recipient is the other user
     setRecipientId(id === 'A' ? 'B' : 'A');
     
-    // Get backend host - use 'backend' when in Docker, fallback to localhost for development
-    const backendHost = process.env.REACT_APP_BACKEND_HOST || 'backend';
+    // Use window.location.hostname instead of the Docker service name
+    // This ensures it works both inside Docker (for container-to-container) 
+    // and from the browser (for browser-to-backend)
+    const backendHost = window.location.hostname;
     
     // Connect to WebSocket server using the backend service name in Docker network
     const ws = new WebSocket(`ws://${backendHost}:5000/ws/${id}`);
