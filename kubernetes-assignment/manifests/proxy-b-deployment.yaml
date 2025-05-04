@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxy-b
+  labels:
+    app: chat-app
+    component: proxy-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-app
+      component: proxy-b
+  template:
+    metadata:
+      labels:
+        app: chat-app
+        component: proxy-b
+    spec:
+      containers:
+      - name: proxy-b
+        image: chat-app-proxy-b:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+        - name: USER_ID
+          value: "B"
+        - name: BACKEND_URL
+          value: "http://backend:5000"
+        volumeMounts:
+        - name: frontend-files
+          mountPath: /app/public
+      
+      # Init container to copy frontend files into the proxy's public directory
+      initContainers:
+      - name: copy-frontend-files
+        image: chat-app-frontend-b:latest
+        imagePullPolicy: IfNotPresent
+        command: ["sh", "-c", "cp -r /app/build/* /public/"]
+        volumeMounts:
+        - name: frontend-files
+          mountPath: /public
+      
+      volumes:
+      - name: frontend-files
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxy-b-service
+  labels:
+    app: chat-app
+    component: proxy-b
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: chat-app
+    component: proxy-b

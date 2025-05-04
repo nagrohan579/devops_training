@@ -1,0 +1,67 @@
+{{- if and .Values.proxy.enabled .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-proxy-b
+  labels:
+    app: {{ .Release.Name }}
+    component: proxy-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+      component: proxy-b
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        component: proxy-b
+    spec:
+      containers:
+      - name: proxy-b
+        image: "{{ .Values.proxy.image.repository }}-b:{{ .Values.proxy.image.tag }}"
+        imagePullPolicy: {{ .Values.proxy.image.pullPolicy }}
+        ports:
+        - containerPort: 3000
+        env:
+        - name: USER_ID
+          value: "B"
+        - name: BACKEND_URL
+          value: "http://{{ .Release.Name }}-backend:{{ .Values.backend.service.port }}"
+        volumeMounts:
+        - name: frontend-files
+          mountPath: /app/public
+        resources:
+{{ toYaml .Values.proxy.resources | indent 12 }}
+      
+      # Init container to copy frontend files into the proxy's public directory
+      initContainers:
+      - name: copy-frontend-files
+        image: "{{ .Values.frontend.image.repository }}-b:{{ .Values.frontend.image.tag }}"
+        imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+        command: ["sh", "-c", "cp -r /app/build/* /public/"]
+        volumeMounts:
+        - name: frontend-files
+          mountPath: /public
+      
+      volumes:
+      - name: frontend-files
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-proxy-b-service
+  labels:
+    app: {{ .Release.Name }}
+    component: proxy-b
+spec:
+  type: {{ .Values.proxy.service.type }}
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: {{ .Release.Name }}
+    component: proxy-b
+{{- end }}

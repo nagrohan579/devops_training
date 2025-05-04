@@ -1,0 +1,57 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-frontend-b
+  labels:
+    app: {{ .Release.Name }}
+    component: frontend-b
+spec:
+  replicas: {{ .Values.frontend.replicaB }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+      component: frontend-b
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        component: frontend-b
+    spec:
+      containers:
+      - name: frontend-b
+        image: "{{ .Values.frontend.image.repository }}-b:{{ .Values.frontend.image.tag }}"
+        imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+        ports:
+        - containerPort: 3000
+        env:
+        - name: REACT_APP_USER_ID
+          value: "B"
+        - name: REACT_APP_BACKEND_HOST
+          value: "backend"
+        - name: REACT_APP_BACKEND_PORT
+          value: "{{ .Values.backend.service.port }}"
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size={{ .Values.frontend.nodeMemoryLimit }}"
+        resources:
+{{ toYaml .Values.frontend.resources | indent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-b-service
+  labels:
+    app: {{ .Release.Name }}
+    component: frontend-b
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+  - port: 3000
+    targetPort: 3000
+    {{- if eq .Values.frontend.service.type "NodePort" }}
+    nodePort: {{ .Values.frontend.service.portB }}
+    {{- end }}
+  selector:
+    app: {{ .Release.Name }}
+    component: frontend-b
+{{- end }}

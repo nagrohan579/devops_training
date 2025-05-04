@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: chat-app
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-app
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: chat-app
+        component: backend
+    spec:
+      containers:
+      - name: backend
+        image: chat-app-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        - name: REDIS_HOST
+          value: redis
+        - name: REDIS_PORT
+          value: "6379"
+        - name: MONGO_HOST
+          value: mongodb
+        - name: MONGO_PORT
+          value: "27017"
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: 300m
+          requests:
+            memory: 128Mi
+            cpu: 150m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    app: chat-app
+    component: backend
+spec:
+  ports:
+  - port: 5000
+    targetPort: 5000
+    name: ws
+  selector:
+    app: chat-app
+    component: backend

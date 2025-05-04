@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-a
+  labels:
+    app: chat-app
+    component: frontend-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-app
+      component: frontend-a
+  template:
+    metadata:
+      labels:
+        app: chat-app
+        component: frontend-a
+    spec:
+      containers:
+      - name: frontend-a
+        image: chat-app-frontend-a:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+        - name: REACT_APP_USER_ID
+          value: "A"
+        - name: REACT_APP_BACKEND_HOST
+          value: "backend"
+        - name: REACT_APP_BACKEND_PORT
+          value: "5000"
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=256"
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 500m
+          requests:
+            memory: 256Mi
+            cpu: 250m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-a-service
+  labels:
+    app: chat-app
+    component: frontend-a
+spec:
+  type: NodePort
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30000
+  selector:
+    app: chat-app
+    component: frontend-a

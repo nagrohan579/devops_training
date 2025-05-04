@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxy-a
+  labels:
+    app: chat-app
+    component: proxy-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-app
+      component: proxy-a
+  template:
+    metadata:
+      labels:
+        app: chat-app
+        component: proxy-a
+    spec:
+      containers:
+      - name: proxy-a
+        image: chat-app-proxy-a:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+        - name: USER_ID
+          value: "A"
+        - name: BACKEND_URL
+          value: "http://backend:5000"
+        volumeMounts:
+        - name: frontend-files
+          mountPath: /app/public
+      
+      # Init container to copy frontend files into the proxy's public directory
+      initContainers:
+      - name: copy-frontend-files
+        image: chat-app-frontend-a:latest
+        imagePullPolicy: IfNotPresent
+        command: ["sh", "-c", "cp -r /app/build/* /public/"]
+        volumeMounts:
+        - name: frontend-files
+          mountPath: /public
+      
+      volumes:
+      - name: frontend-files
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxy-a-service
+  labels:
+    app: chat-app
+    component: proxy-a
+spec:
+  type: ClusterIP  # Changed from NodePort to ClusterIP as we'll use port-forwarding
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: chat-app
+    component: proxy-a

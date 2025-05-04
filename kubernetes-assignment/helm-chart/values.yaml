@@ -1,0 +1,98 @@
+## Global values
+nameOverride: ""
+fullnameOverride: ""
+
+## Frontend configuration
+frontend:
+  enabled: true
+  replicaA: 1
+  replicaB: 1
+  nodeMemoryLimit: 256
+  image:
+    repository: chat-app-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    portA: 30000
+    portB: 30001
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+## Proxy configuration
+proxy:
+  enabled: true
+  image:
+    repository: chat-app-proxy
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+  resources:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 150m
+      memory: 128Mi
+
+## Backend configuration
+backend:
+  enabled: true
+  replicas: 1
+  image:
+    repository: chat-app-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    port: 5000
+  resources:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 150m
+      memory: 128Mi
+
+## Redis configuration
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 6.2-alpine
+    pullPolicy: IfNotPresent
+  service:
+    port: 6379
+  resources:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 150m
+      memory: 128Mi
+
+## MongoDB configuration
+mongodb:
+  enabled: true
+  image:
+    repository: mongo
+    tag: 5.0
+    pullPolicy: IfNotPresent
+  service:
+    port: 27017
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 1Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
