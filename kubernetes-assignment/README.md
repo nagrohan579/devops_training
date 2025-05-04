@@ -234,3 +234,7 @@ This allows you to verify that messages are being properly stored in the databas
 - Add Kubernetes Ingress for easier external access
 - Implement horizontal pod autoscaling
 
+## Running Demo
+
+https://github.com/user-attachments/assets/568b2893-1e3f-4a85-907e-57f104cdf6c1
+
