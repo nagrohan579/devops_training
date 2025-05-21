@@ -83,6 +83,10 @@ I logged in with:
 - **Grafana Home Page:**
   ![Grafana Home Page](images/grafana_home.png)
 
+- **Grafana Dashboard:**
+
+https://github.com/user-attachments/assets/be891eea-426e-4be0-a5bf-19dfc830cddb
+
 ---
 
 ## 5. Useful Commands I Used
