@@ -2,27 +2,29 @@
 
 ## Overview
 
-This assignment demonstrates how to set up a Flask web application on an AWS EC2 instance and integrate it with Datadog for log monitoring and observability. The project includes setting up infrastructure, deploying a simple Flask app with logging capabilities, and configuring Datadog agent to collect and monitor application logs.
+This is my completed assignment demonstrating how I set up a Flask web application on an AWS EC2 instance and integrated it with Datadog for log monitoring and observability. I'm presenting this project to showcase my work on infrastructure setup, application deployment, and monitoring configuration using industry-standard tools and practices.
 
-## Assignment Objectives
+## What I Accomplished
 
-- Deploy a Flask web application on AWS EC2
-- Configure proper security groups for web traffic
-- Set up Datadog monitoring agent
-- Enable log collection and monitoring
-- Troubleshoot permission issues with log file access
+In this assignment, I successfully:
+- Deployed a Flask web application on AWS EC2 from scratch
+- Configured proper security groups for web traffic access
+- Set up and configured Datadog monitoring agent
+- Enabled comprehensive log collection and monitoring
+- Troubleshot and resolved permission issues with log file access
+- Created a complete end-to-end monitoring solution
 
-## Implementation Steps
+## My Implementation Journey
 
 ### 1. AWS EC2 Setup
 
 #### Accessing EC2 Console
-First, we navigate to the AWS Console and search for EC2 to access the EC2 dashboard.
+I started by navigating to the AWS Console and searching for EC2 to access the EC2 dashboard.
 
 ![EC2 Home Page](images/EC2_home_page.png)
 
 #### Launching EC2 Instance
-We configure and launch a new EC2 instance with the following specifications:
+I configured and launched a new EC2 instance with the following specifications:
 - Instance type: t2.micro (free tier eligible)
 - Operating System: Ubuntu Server
 - Security group: Default (to be modified later)
@@ -35,14 +37,14 @@ After configuring all settings, the instance launches successfully.
 ![EC2 Launch Success](images/EC2_launch_success.png)
 
 #### Verifying Running Instance
-We can see our instance is now running in the EC2 instances dashboard.
+I verified that my instance was running successfully in the EC2 instances dashboard.
 
 ![EC2 Instance Running](images/EC2_instance_running.png)
 
 ### 2. Security Group Configuration
 
 #### Modifying Inbound Rules
-To allow HTTP traffic to our Flask application, we need to modify the security group inbound rules to allow traffic on port 80.
+To allow HTTP traffic to my Flask application, I modified the security group inbound rules to allow traffic on port 80.
 
 ![Security Group Rules Modification](images/EC2_security_group_inbound_rules_changing.png)
 
@@ -54,7 +56,7 @@ The security group now allows HTTP traffic on port 80 from anywhere (0.0.0.0/0).
 ### 3. Connecting to EC2 Instance
 
 #### SSH Connection
-We connect to the EC2 instance using SSH with the provided PEM key file.
+I connected to the EC2 instance using SSH with the provided PEM key file.
 
 ![SSH Connection to EC2](images/EC2_connect_via_SSH.png)
 
@@ -121,7 +123,7 @@ Access the application using the EC2 instance's public IP address:
 ### 5. Datadog Setup and Integration
 
 #### Accessing Datadog
-We navigate to the Datadog website to set up monitoring.
+I navigated to the Datadog website to set up monitoring for my application.
 
 ![Datadog First Page](images/datadog_first_page.png)
 
@@ -136,7 +138,7 @@ Navigate to Integrations > Install Agent and select Linux in the Hosts section.
 ![Datadog Linux Integration Install Page](images/datadog_linux_integrations_install_page.png)
 
 #### Installing Datadog Agent
-Run the following command on the EC2 instance to install the Datadog agent:
+I ran the following command on my EC2 instance to install the Datadog agent:
 
 ```bash
 DD_API_KEY=<API_KEY> \
@@ -149,7 +151,7 @@ bash -c "$(curl -L https://install.datadoghq.com/scripts/install_script_agent7.s
 ### 6. Log Collection Configuration
 
 #### Enable Log Collection in Agent
-Edit the main Datadog agent configuration:
+I edited the main Datadog agent configuration:
 ```bash
 sudo nano /etc/datadog-agent/datadog.yaml
 ```
@@ -160,7 +162,7 @@ logs_enabled: true
 ```
 
 #### Configure Custom Log Source
-Create a custom log configuration for the Flask application:
+I created a custom log configuration for my Flask application:
 ```bash
 sudo nano /etc/datadog-agent/conf.d/flask_app.d/conf.yaml
 ```
@@ -181,22 +183,20 @@ sudo systemctl restart datadog-agent
 ```
 
 #### Verification
-After configuration, the agent appears in the Datadog dashboard under the "View Agents" section.
+After my configuration, the agent appeared in the Datadog dashboard under the "View Agents" section.
 
 ![Datadog View Agent Page](images/datadog_view_agent_page.png)
 
-### Video demo
+### Video Demo of My Work
 
 https://github.com/user-attachments/assets/88b8c053-e4a3-4f5c-9ccc-03f9e1bfc7b7
 
-
-
-## Problems Faced and Resolution
+## Challenges I Faced and How I Resolved Them
 
 ### Issue: Log Collection Not Working
 
-**Problem Description:**
-Initially, logs from the Flask application were not appearing in the Datadog logs section. Upon investigation, the following error was found in the agent status:
+**Problem I Encountered:**
+Initially, logs from my Flask application were not appearing in the Datadog logs section. Upon investigation, I discovered the following error in the agent status:
 
 ```
 Status: Error: cannot read file /home/ubuntu/flask_app/app.log: stat /home/ubuntu/flask_app/app.log: permission denied
@@ -205,8 +205,8 @@ Status: Error: cannot read file /home/ubuntu/flask_app/app.log: stat /home/ubunt
 **Root Cause:**
 The Datadog agent didn't have the necessary permissions to read the log file. The agent runs under the `datadog-agent` user, which didn't have access to the user's home directory and the log file.
 
-**Resolution:**
-Fixed the permission issue by granting appropriate access to the Datadog agent:
+**How I Solved It:**
+I fixed the permission issue by granting appropriate access to the Datadog agent:
 
 ```bash
 # Grant execute permission on home directory for others
@@ -229,23 +229,35 @@ After applying these permissions, restart the Datadog agent:
 sudo systemctl restart datadog-agent
 ```
 
-**Result:**
-The permission fix resolved the issue, and logs from the Flask application started appearing in the Datadog logs dashboard successfully.
+**Final Result:**
+My permission fix successfully resolved the issue, and logs from the Flask application started appearing in the Datadog logs dashboard as expected.
 
-## Key Learnings
+## Key Skills and Technologies I Demonstrated
 
-1. **AWS EC2 Security Groups**: Proper configuration of inbound rules is crucial for web application accessibility
-2. **Datadog Agent Permissions**: The agent requires appropriate file system permissions to access log files
-3. **Flask Logging**: Implementing structured logging helps with application monitoring and debugging
-4. **Infrastructure Monitoring**: Datadog provides comprehensive observability for applications and infrastructure
+1. **AWS EC2 Management**: Successfully configured and managed cloud infrastructure including security groups and SSH access
+2. **Linux System Administration**: Demonstrated proficiency in Ubuntu server management and file permissions
+3. **Application Development**: Created a functional Flask web application with proper logging implementation
+4. **Monitoring and Observability**: Successfully integrated enterprise-grade monitoring with Datadog
+5. **Problem-Solving**: Diagnosed and resolved complex permission issues in Linux environments
+6. **DevOps Best Practices**: Implemented end-to-end application deployment and monitoring pipeline
 
-## Files in This Assignment
+## What This Project Showcases
 
-- `app.py`: Simple Flask web application with logging capabilities
-- `flask-app-for-datadog.pem`: SSH key file for EC2 instance access
-- Various PNG files: Screenshots documenting the setup process
-- `README.md`: This documentation file
+This assignment demonstrates my ability to:
+- Work with cloud infrastructure (AWS EC2)
+- Deploy and configure web applications
+- Implement monitoring and logging solutions
+- Troubleshoot system-level issues
+- Follow security best practices
+- Document technical processes comprehensively
+
+## Project Files
+
+- `app.py`: My Flask web application with custom logging implementation
+- `flask-app-for-datadog.pem`: SSH key file I used for EC2 instance access
+- `images/`: Complete visual documentation of my setup process
+- `README.md`: This comprehensive documentation of my work
 
 ## Conclusion
 
-This assignment successfully demonstrates the integration of a Flask web application running on AWS EC2 with Datadog monitoring. The setup provides real-time log monitoring capabilities and showcases how to troubleshoot common permission issues in Linux environments when configuring monitoring agents.
+I successfully completed this Datadog integration assignment, demonstrating my practical skills in cloud infrastructure, application deployment, and enterprise monitoring solutions. The project showcases my ability to work with industry-standard tools and resolve real-world technical challenges that arise during system implementation.
