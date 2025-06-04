@@ -185,6 +185,12 @@ After configuration, the agent appears in the Datadog dashboard under the "View 
 
 ![Datadog View Agent Page](datadog_view_agent_page.png)
 
+### Video demo
+
+https://github.com/user-attachments/assets/88b8c053-e4a3-4f5c-9ccc-03f9e1bfc7b7
+
+
+
 ## Problems Faced and Resolution
 
 ### Issue: Log Collection Not Working
