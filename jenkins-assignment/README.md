@@ -232,8 +232,8 @@ pipeline {
     PROJECT_ID      = 'gke-guess-number-app'
     CLUSTER_NAME    = 'gke-guess-number-game'
     LOCATION        = 'us-central1-c'
-    GCLOUD_CREDS    = credentials('gcloud-creds')   // your service account JSON
-    DOCKER_CREDS    = 'dockerhub-credentials'       // your DockerHub creds ID
+    GCLOUD_CREDS    = credentials('gcloud-creds')   
+    DOCKER_CREDS    = 'dockerhub-credentials'       
     NAMESPACE       = 'default'
   }
 
@@ -275,7 +275,7 @@ pipeline {
           // Get cluster credentials locally (sets up kubectl config)
           sh "gcloud container clusters get-credentials $CLUSTER_NAME --zone $LOCATION --project $PROJECT_ID"
 
-          // Ensure kubectl is present (or pre-install on agent image)
+          // Ensure kubectl is present 
           sh 'curl -LO "https://dl.k8s.io/release/v1.20.5/bin/linux/amd64/kubectl"'
           sh 'chmod u+x kubectl'
 
