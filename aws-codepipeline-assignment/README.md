@@ -88,6 +88,59 @@ I needed a CodeBuild project, so I created one.
 
 ![CodeBuild Project Created](images/aws_created_codebuild_project.png)
 
+### My buildspec.yml file
+
+Here is the `buildspec.yml` file I used for the build stage:
+
+```yaml
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 677276117957.dkr.ecr.us-east-1.amazonaws.com
+      - REPOSITORY_URI=677276117957.dkr.ecr.us-east-1.amazonaws.com/guess-number-app
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+  build:
+    commands:
+      - echo "Starting build of maven project"
+      - mvn -B package --file pom.xml
+      - echo "Build completed successfully"
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Writing image definitions file...
+      - printf '[{"name":"guess-number-app","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+artifacts:
+  files: imagedefinitions.json
+```
+
+#### Explanation of the buildspec.yml
+
+- **version: 0.2**: This specifies the buildspec version.
+- **phases**: The build process is divided into three phases:
+  - **pre_build**: 
+    - Logs in to Amazon ECR using the AWS CLI.
+    - Sets environment variables for the repository URI and image tag (using the commit hash or 'latest').
+  - **build**: 
+    - Builds the Maven project (`mvn -B package --file pom.xml`).
+    - Builds the Docker image and tags it with both `latest` and the commit hash.
+  - **post_build**: 
+    - Pushes both tags of the Docker image to ECR.
+    - Writes an `imagedefinitions.json` file, which is used by ECS for deployment.
+- **artifacts**: 
+  - Specifies that `imagedefinitions.json` should be included as a build artifact for the deploy stage.
+
 ---
 
 ## Skipping Test and Deploy Stages (for now)
