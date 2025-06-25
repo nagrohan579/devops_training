@@ -173,7 +173,7 @@ I used the default credentials:
 - **Default Password**: admin
 
 The system prompted me to change the password:
-- **New Password**: RohanNag123#
+- **New Password**: `<new password>`
 
 ![SonarQube First Page After Login](images/sonarqube_first_page_after_login.png)
 
