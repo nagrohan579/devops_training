@@ -173,7 +173,7 @@ I used the default credentials:
 - **Default Password**: admin
 
 The system prompted me to change the password:
-- **New Password**: RohanNag123#
+- **New Password**: `<new password>`
 
 ![SonarQube First Page After Login](images/sonarqube_first_page_after_login.png)
 
@@ -263,6 +263,11 @@ jobs:
 After I successfully connected GitHub Actions with SonarQube, my code analysis results are now available:
 
 ![SonarQube Result After GitHub Actions Integration](images/sonarqube_result_after_connecting_with_github_actions.png)
+
+## Demo video
+
+https://github.com/user-attachments/assets/48cbd10e-c4ba-45f4-9f31-6ea015307fde
+
 
 ## Conclusion
 
